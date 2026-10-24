@@ -20,7 +20,7 @@ namespace SimsonnPedals
         public static int BrakeAxis(byte[] block) => PedalAxisBase(block) + 1;
         public static int ClutchAxis(byte[] block) => PedalAxisBase(block) + 2;
 
-        private static bool IsAxisUsed(byte[] block, int axis) => block[AxisBase + AxisSize * axis + SourceMain] != SourceNone;
+        public static bool IsAxisUsed(byte[] block, int axis) => block[AxisBase + AxisSize * axis + SourceMain] != SourceNone;
 
         /// <summary>
         /// Raw load-cell units per kg of max force on a calibrated brake, or null for a firmware the plugin doesn't know.
@@ -62,6 +62,12 @@ namespace SimsonnPedals
 
         private const int AxisBase = 0x40;
         private const int AxisSize = 52;
+
+        /// <summary>Length of the whole settings block (18 packets × 62 bytes).</summary>
+        public const int BlockSize = 1116;
+
+        /// <summary>Where axis <paramref name="axis"/>'s 52 bytes start in the block.</summary>
+        public static int AxisOffset(int axis) => AxisBase + AxisSize * axis;
         private const int OutLow = 0, OutCentre = 2, OutHigh = 4, RawMin = 6, RawMax = 8;
         private const int Flags = 10, Curve = 11, CurvePoints = 11, DeadzoneStart = 34, DeadzoneEndGap = 35;
         private const int FilterMask = 0xE0, FilterShift = 5;
@@ -70,11 +76,14 @@ namespace SimsonnPedals
 
         public sealed class AxisSettings
         {
+            public int OutLow { get; set; }
+            public int OutHigh { get; set; }
             public int RawMin { get; set; }
             public int RawMax { get; set; }
             public int DeadzoneStart { get; set; }
             public int DeadzoneEnd { get; set; }
             public int Filter { get; set; }
+            public bool Inverted { get; set; }
             public sbyte[] Curve { get; set; }
 
             public bool IsLinear => Curve.Select((p, i) => p == -100 + 20 * i).All(x => x);
@@ -85,11 +94,14 @@ namespace SimsonnPedals
             int o = AxisBase + AxisSize * axis;
             return new AxisSettings
             {
+                OutLow = BitConverter.ToInt16(block, o + OutLow),
+                OutHigh = BitConverter.ToInt16(block, o + OutHigh),
                 RawMin = BitConverter.ToInt16(block, o + RawMin),
                 RawMax = BitConverter.ToInt16(block, o + RawMax),
                 DeadzoneStart = block[o + DeadzoneStart],
                 DeadzoneEnd = 100 - block[o + DeadzoneEndGap],
                 Filter = (block[o + Flags] & FilterMask) >> FilterShift,
+                Inverted = (block[o + Flags] & 0x02) != 0,
                 Curve = Enumerable.Range(0, CurvePoints).Select(i => unchecked((sbyte)block[o + Curve + i])).ToArray(),
             };
         }

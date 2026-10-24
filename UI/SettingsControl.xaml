@@ -57,6 +57,14 @@
                     </styles:SHToggleCheckbox>
                     <TextBlock x:Name="AutoPresetText" Margin="0,4,0,0" TextWrapping="Wrap" Opacity="0.7" />
                     <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="Simsonn Manager settings" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <styles:SHButtonSecondary x:Name="ImportManagerFileButton" Click="OnImportManagerFileClick"
+                                                  ToolTip="Loads dead zones, curves and the brake's 100% force from a Simsonn Manager preset file (etc\device\&lt;name&gt;\pedal.cfg) into the active preset, so the pedals respond exactly as they did with it. Revert undoes it.">Import Manager preset…</styles:SHButtonSecondary>
+                        <styles:SHButtonSecondary x:Name="ImportPedalsButton" Click="OnImportPedalsClick"
+                                                  ToolTip="Same, from the settings stored in the pedals (useful before Set up pedals replaces them). The pedals stop responding for about 2 seconds.">Import from pedals</styles:SHButtonSecondary>
+                    </WrapPanel>
+                    <TextBlock x:Name="ImportStatus" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    <WrapPanel Margin="0,8,0,0">
                         <TextBlock Text="vJoy device" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <ComboBox x:Name="VJoyDeviceCombo" Width="60" SelectionChanged="OnVJoyDeviceChanged" />
                     </WrapPanel>

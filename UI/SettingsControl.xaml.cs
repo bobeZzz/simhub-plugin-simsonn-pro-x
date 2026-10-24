@@ -107,6 +107,60 @@ namespace SimsonnPedals.UI
             if (plugin.Settings.ClutchEnabled) ClutchPanel.Refresh(engine.DeviceConnected);
         }
 
+        private void OnImportManagerFileClick(object sender, RoutedEventArgs e)
+        {
+            string manager = plugin.Settings.ManagerFolder ?? FirmwareFile.FindManagerFolder();
+            string devices = manager == null ? null : Path.Combine(manager, "etc", "device");
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Simsonn Manager pedal preset",
+                Filter = "Manager presets (*.cfg)|*.cfg|All files (*.*)|*.*",
+                InitialDirectory = devices != null && Directory.Exists(devices) ? devices : manager,
+            };
+            if (dialog.ShowDialog() != true) return;
+            try
+            {
+                ShowImport(ManagerImport.Apply(ManagerImport.BlockFromIni(File.ReadAllLines(dialog.FileName)),
+                    plugin.ActivePreset, plugin.Settings.ClutchEnabled), Path.GetFileName(Path.GetDirectoryName(dialog.FileName)));
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is FormatException)
+            {
+                ImportStatus.Text = "Not imported: " + ex.Message;
+            }
+        }
+
+        private async void OnImportPedalsClick(object sender, RoutedEventArgs e)
+        {
+            if (plugin.IsGameRunning &&
+                MessageBox.Show("A game is running. The pedals may stop responding for a few seconds. Continue?",
+                    "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                return;
+            ImportPedalsButton.IsEnabled = false;
+            ImportStatus.Text = "Reading settings from the pedals…";
+            try
+            {
+                int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
+                var read = await Task.Run(() => PedalConfigReader.Read(vid, pid, "import"));
+                if (!read.Success) ImportStatus.Text = "Not imported: " + read.Summary;
+                else ShowImport(ManagerImport.Apply(read.Data, plugin.ActivePreset, plugin.Settings.ClutchEnabled), "the pedals");
+            }
+            catch (Exception ex)
+            {
+                ImportStatus.Text = "Not imported: " + ex.Message;
+            }
+            finally
+            {
+                ImportPedalsButton.IsEnabled = true;
+            }
+        }
+
+        private void ShowImport(ManagerImport.Result result, string source)
+        {
+            ImportStatus.Text = result.Success
+                ? $"Into preset {plugin.Settings.ActivePresetName}, from {source}. {result} Save keeps it, Revert undoes it."
+                : result.ToString();
+        }
+
         private DateTime nextBindingCheck;
         private string checkedBindingsFor;
         private bool bindingCheckRunning;
