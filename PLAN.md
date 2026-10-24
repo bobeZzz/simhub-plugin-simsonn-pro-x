@@ -48,48 +48,10 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | F5 | **Read pedal settings** also reads throttle cut, elastomer, raw sensors (report 6) and 3 s of params reports; rig-checked: report 6 and params layout confirmed, firmware throttle cut found on at 10 % | 1.0.6 |
 | F5 | **Set up pedals** switches the firmware throttle cut off (report 6 `brakeCutoff`); verified on the rig: no restart, both pedals work together, stays off after SimHub restart and replug | 1.0.7 |
 | 8 | **Calibrate pedals**: live raw values from the params report (`PedalRawMonitor`), Start at rest → press → Finish; one block write (throttle raw range, brake rest, then Set up pedals); plugin calibration of all presets reset to full range. Rig run 20:46: written and verified; throttle raw −32767…−8522, brake rest −30341 → −30239, 85 kg kept, only the expected bytes changed | 1.0.8 |
+| 9 | **Firmware update** from the plugin with the Manager's own files and key (CRC-checked): main chip via SIMSONN Flasher report 5, second chip via report 7, resume from update mode, rollback file choice. Rig: 2.0.8 → 2.1.1 / 2.0.6. 2.1.x support: pedal axes and raw channels found from the block (3–5 on 2.1), presets switched to Rx/Ry; calibration on 2.1.1 verified, bars move. See [research/firmware-update.md](research/firmware-update.md) | 1.0.9–1.0.12 |
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-0. **Phase 9 – firmware update from the plugin: built in 1.0.9; second chip fixed in 1.0.10, rig check pending.**
-   - 1.0.9 on the rig: bootloader entry and the main chip (2.1.1) worked; the flasher is PID 0x5055.
-   - 1.0.9 then waited for the pedals to restart, but the second chip goes to the flasher on report 7. That left the
-     pedals in update mode.
-   - 1.0.10 sends the second chip to the flasher. Update firmware also finishes from update mode: it flashes both
-     chips again without the bootloader command.
-   - **1.0.10 on the rig: update to 2.1.1 / 2.0.6 done.** The read-back saw the second chip as 0.0.0 because it read
-     too early; a dump a minute later showed 0x0206. 1.0.11 keeps reading until the second chip answers.
-   - **2.1.1 reset the settings block to the Manager's 2.1 defaults (`env/Default_ProXUltra`):**
-     - axes 0–2 are off (source 0xFF);
-     - the pedals are on axes 3–5 (source 11), with dead zone 5–95;
-     - calibration is wiped (raw −32767…32767);
-     - the params report's raw channels 3–5 carry the sensors (≈2575 / 3003 / 108 at rest);
-     - throttle cut (off) and elastomer (hard) survived.
-   - 1.0.11 finds the pedal axes from the source byte (`PedalAxisBase`: 0 on 2.0.x, 3 on 2.1.x), and allows Set up and
-     Calibrate on 2.1.x with 148 units/kg (from the Manager's code, untested).
-   - 1.0.11 on the rig: calibration on 2.1.1 was written and verified.
-     - Throttle axis 3: 2561…5779.
-     - Brake axis 4: rest 2923, 85 kg = +12580 at 148 units/kg.
-     - The pedals' processed output is ≈0 % at rest.
-     - The plugin's bars stayed still: the presets read joystick X/Y, which are dead now.
-   - FreeJoy names its axes X, Y, Z, Rx, Ry, Rz in settings order, so axes 3–4 should arrive as Rx/Ry.
-   - 1.0.12 sets every preset's source axes from the settings block after Read, Set up and Calibrate. Rig check:
-     "Raw axes" shows Rx/Ry moving and the bars follow.
-   - Protocol: `research/firmware-update.md`.
-   - Code: `FirmwareFile` reads and decrypts the `.sfu` files using the key from the user's Manager install, and checks
-     model and CRCs. `PedalFirmwareUpdater` does bootloader run → flasher report 5 → second chip report 7 → version
-     read-back.
-   - The UI section "Pedal firmware" offers the Manager's file (2.1.1) or an older one (2.0.8 rollback).
-   - Tested offline:
-     - decryption matches openssl;
-     - the flash exchange works against a simulated bootloader (success, CRC ERROR, timeout).
-   - To check on the rig, with Simsonn Manager kept installed as the fallback:
-     - the flasher appears (note its PID from the report);
-     - report 7 exists after 2.1.1;
-     - the versions read back;
-     - what 2.1.1 keeps of the settings, from Read pedal settings.
-   - Set up and Calibrate refuse anything but 2.0.x (`PedalSettingsLayout.IsLayoutVerified`) until a 2.1.1 dump has
-     been compared with 2.0.8.
 1. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
    level is active. Needs SimHub's car id and class from GameData.
 2. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
