@@ -87,24 +87,63 @@ namespace SimsonnPedals
             if (game != lastGameName)
             {
                 lastGameName = game;
-                CurrentCarId = CurrentCarModel = CurrentCarClass = null;
+                CurrentCarId = CurrentCarModel = CurrentCarClass = CurrentCarClassKey = null;
+                classFromRaw = false;
             }
             // Keep the last car while the game reports none (menus, loading), so the preset doesn't flip back and forth.
             if (!string.IsNullOrEmpty(carId))
             {
+                if (carId != CurrentCarId) classFromRaw = false;
                 CurrentCarId = carId;
                 CurrentCarModel = string.IsNullOrEmpty(carModel) ? carId : carModel;
-                CurrentCarClass = string.IsNullOrEmpty(carClass) ? null : carClass;
+                if (!classFromRaw)
+                {
+                    CurrentCarClass = CurrentCarClassKey = string.IsNullOrEmpty(carClass) ? null : carClass;
+                    ReadRawCarClass(data);
+                }
             }
-            if (game == appliedForGame && CurrentCarId == appliedForCar && CurrentCarClass == appliedForClass) return;
+            if (game == appliedForGame && CurrentCarId == appliedForCar && CurrentCarClassKey == appliedForClass) return;
             appliedForGame = game;
             appliedForCar = CurrentCarId;
-            appliedForClass = CurrentCarClass;
+            appliedForClass = CurrentCarClassKey;
             if (Settings.AutoApplyPerGame) ApplyAutoPreset();
         }
 
         // What the automatic preset was last applied for, so it runs once per game / car change.
         private string appliedForGame, appliedForCar, appliedForClass;
+        private bool classFromRaw;
+        private DateTime nextRawClassRead;
+        private string loggedRawTypeFor;
+
+        /// <summary>
+        /// iRacing: the class id from the session info (SimHub's CarClass is empty in single-class sessions). Tried once a
+        /// second until the session info has it, then kept for this car.
+        /// </summary>
+        private void ReadRawCarClass(GameData data)
+        {
+            if (DateTime.UtcNow < nextRawClassRead) return;
+            nextRawClassRead = DateTime.UtcNow.AddSeconds(1);
+            object raw = data.NewData?.GetRawDataObject();
+            if (!IRacingCarClass.TryRead(raw, out long classId, out string shortName))
+            {
+                // Once per game, so a SimHub change in the raw iRacing object shows up in the log.
+                if (raw != null && loggedRawTypeFor != data.GameName)
+                {
+                    loggedRawTypeFor = data.GameName;
+                    SimHub.Logging.Current.Info($"[SimsonnPedals] No car class in raw data of type {raw.GetType().FullName} ({data.GameName}).");
+                }
+                return;
+            }
+            classFromRaw = true;
+            CurrentCarClassKey = classId != 0 ? $"id:{classId}" : shortName;
+            CurrentCarClass = !string.IsNullOrEmpty(shortName) ? shortName : CurrentCarClass ?? $"Class {classId}";
+        }
+
+        /// <summary>
+        /// What class presets are linked by: iRacing's class id when known (the same in every session type), else the
+        /// class name. Null if the game reports no class.
+        /// </summary>
+        public string CurrentCarClassKey { get; private set; }
 
         /// <summary>SimHub's id of the car in use (kept through menus), or null before one is known in this game.</summary>
         public string CurrentCarId { get; private set; }
@@ -257,7 +296,7 @@ namespace SimsonnPedals
         }
 
         /// <summary>Activates the preset <see cref="ResolvePreset"/> picks for the current game and car.</summary>
-        public void ApplyAutoPreset() => ActivatePreset(ResolvePreset(CurrentGameName, CurrentCarId, CurrentCarClass, out _));
+        public void ApplyAutoPreset() => ActivatePreset(ResolvePreset(CurrentGameName, CurrentCarId, CurrentCarClassKey, out _));
 
         /// <summary>Saves the current values as a preset named after the car and links it to this car.</summary>
         public void SaveForCurrentCar()
@@ -273,15 +312,17 @@ namespace SimsonnPedals
         /// <summary>Saves the current values as a preset named after the car's class and links it to that class.</summary>
         public void SaveForCurrentClass()
         {
-            string game = CurrentGameName, carClass = CurrentCarClass;
-            if (string.IsNullOrEmpty(game) || string.IsNullOrEmpty(carClass)) return;
+            string game = CurrentGameName, classKey = CurrentCarClassKey, carClass = CurrentCarClass;
+            if (string.IsNullOrEmpty(game) || string.IsNullOrEmpty(classKey) || string.IsNullOrEmpty(carClass)) return;
             string name = ClassPresetName(carClass);
             SaveActiveAs(name);
-            lock (presetLock) Settings.ClassPresets[PluginSettings.CarKey(game, carClass)] = name;
+            lock (presetLock) Settings.ClassPresets[PluginSettings.CarKey(game, classKey)] = name;
             Save();
         }
 
-        public static string ClassPresetName(string carClass) => $"{carClass} class";
+        /// <summary>"GT3 class" from "GT3"; names that already say class ("GT3 Class", "Class 4029") stay as they are.</summary>
+        public static string ClassPresetName(string carClass) =>
+            carClass.IndexOf("class", StringComparison.OrdinalIgnoreCase) >= 0 ? carClass : $"{carClass} class";
 
         public void ActivatePreset(string name)
         {

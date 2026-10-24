@@ -89,8 +89,8 @@ namespace SimsonnPedals.UI
             string car = plugin.CurrentCarModel, carClass = plugin.CurrentCarClass;
             SaveForCarButton.IsEnabled = !string.IsNullOrEmpty(game) && plugin.CurrentCarId != null;
             SaveForCarButton.Content = SaveForCarButton.IsEnabled ? $"Save for {car}" : "Save for this car";
-            SaveForClassButton.IsEnabled = !string.IsNullOrEmpty(game) && carClass != null;
-            SaveForClassButton.Content = SaveForClassButton.IsEnabled ? $"Save for {carClass} class" : "Save for this class";
+            SaveForClassButton.IsEnabled = !string.IsNullOrEmpty(game) && carClass != null && plugin.CurrentCarClassKey != null;
+            SaveForClassButton.Content = SaveForClassButton.IsEnabled ? $"Save for {SimsonnPedalsPlugin.ClassPresetName(carClass)}" : "Save for this class";
             string autoText = DescribeAutoPreset();
             if (AutoPresetText.Text != autoText) AutoPresetText.Text = autoText;
 
@@ -179,7 +179,7 @@ namespace SimsonnPedals.UI
             if (string.IsNullOrEmpty(game)) return "No game selected in SimHub.";
             string car = plugin.CurrentCarModel == null ? "no car yet"
                 : plugin.CurrentCarClass == null ? plugin.CurrentCarModel : $"{plugin.CurrentCarModel} ({plugin.CurrentCarClass})";
-            string auto = plugin.ResolvePreset(game, plugin.CurrentCarId, plugin.CurrentCarClass, out var level);
+            string auto = plugin.ResolvePreset(game, plugin.CurrentCarId, plugin.CurrentCarClassKey, out var level);
             string why = level == SimsonnPedalsPlugin.PresetLevel.Car ? "saved for this car"
                 : level == SimsonnPedalsPlugin.PresetLevel.Class ? "saved for this class"
                 : level == SimsonnPedalsPlugin.PresetLevel.Game ? $"saved for {game}"

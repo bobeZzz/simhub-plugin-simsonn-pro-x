@@ -59,7 +59,13 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
    - New buttons: "Save for <car>" and "Save for <class> class", which save as a named preset and link it. A line
      shows the game and car, the automatic choice and why, and whether the preset in use was picked by hand.
    - Deleting a preset drops its links. Tested offline: lookup order, case, a stale link dropped.
-   - Rig check: car and class names show for iRacing; switching cars picks the right preset.
+   - 1.0.13 on the rig: car presets work (Acura NSX GT3 EVO 22). The class was empty: SimHub takes it from
+     `CarClassShortName`, which iRacing leaves blank in single-class sessions.
+   - 1.0.14 reads the class from SimHub's raw iRacing data instead (`IRacingCarClass`, by reflection).
+     - Class presets are linked by `CarClassID` ("id:4029"), the same in every session type.
+     - The shown name is the short name, else "Class <id>".
+     - If the read fails, the raw type is logged once per game.
+   - Rig check: the class button enables in iRacing, and switching cars in the same class picks the class preset.
 2. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
    the brake pressed in the sim). Zeroing in End/ProcessExit isn't enough; an earlier exit-watchdog attempt was abandoned.
 3. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.
