@@ -246,6 +246,21 @@ namespace SimsonnPedals
             lock (presetLock) modifiedCache.Clear();
         }
 
+        /// <summary>
+        /// After calibrating the pedals themselves they report 0–100 % over the full axis, so the plugin's own
+        /// calibration in every preset goes back to the full range (call on the UI thread).
+        /// </summary>
+        public void ResetPluginCalibration()
+        {
+            foreach (var preset in Settings.Presets.Values.Concat(Settings.SavedPresets.Values))
+            {
+                preset.Throttle.ResetCalibration();
+                preset.Brake.ResetCalibration();
+            }
+            lock (presetLock) modifiedCache.Clear();
+            Save();
+        }
+
         public bool DeletePreset(string name)
         {
             if (string.Equals(name, PluginSettings.DefaultPresetName, StringComparison.OrdinalIgnoreCase)) return false;

@@ -141,6 +141,34 @@ namespace SimsonnPedals
             return result;
         }
 
+        /// <summary>Smallest raw travel accepted as a calibration (Simsonn Manager's limit too).</summary>
+        public const int MinCalibrationSpan = 1000;
+
+        /// <summary>
+        /// Copy of <paramref name="block"/> with new calibration, then set up like <see cref="BaseSetup"/>: throttle raw
+        /// range = rest…full press, brake rest = <paramref name="brakeRest"/> and its full press from the max force.
+        /// Simsonn Manager's calibration writes the same raw fields (+6/+8, its old_calib_min/max).
+        /// </summary>
+        public static byte[] Calibrate(byte[] block, int throttleRest, int throttleFull, int brakeRest, double brakeMaxForceKg)
+        {
+            if (throttleFull - throttleRest < MinCalibrationSpan)
+                throw new ArgumentOutOfRangeException(nameof(throttleFull), "The throttle didn't move enough: press it fully during calibration.");
+            var result = (byte[])block.Clone();
+            int throttle = AxisBase + AxisSize * ThrottleAxis;
+            WriteInt16(result, throttle + RawMin, throttleRest);
+            WriteInt16(result, throttle + RawMax, throttleFull);
+            WriteInt16(result, AxisBase + AxisSize * BrakeAxis + RawMin, brakeRest);
+            return BaseSetup(result, brakeMaxForceKg);
+        }
+
+        /// <summary>The calibration stored in the pedals, for display.</summary>
+        public static string DescribeCalibration(byte[] block)
+        {
+            var throttle = ReadAxis(block, ThrottleAxis);
+            var brake = ReadAxis(block, BrakeAxis);
+            return $"Throttle raw {throttle.RawMin} (rest) … {throttle.RawMax} (full); brake raw {brake.RawMin} (rest)";
+        }
+
         /// <summary>Highest max force the brake's calibration leaves room for (the firmware must be known).</summary>
         public static double MaxBrakeForceKg(byte[] block) =>
             Math.Floor((short.MaxValue - ReadAxis(block, BrakeAxis).RawMin) / UnitsPerKg(block).Value);

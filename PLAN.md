@@ -1,7 +1,7 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.7).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.8).
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -47,15 +47,16 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | – | Max force units/kg from the firmware version (300 for 2.0.x, 148 for 2.1.x, refuse others) | 1.0.6 |
 | F5 | **Read pedal settings** also reads throttle cut, elastomer, raw sensors (report 6) and 3 s of params reports; rig-checked: report 6 and params layout confirmed, firmware throttle cut found on at 10 % | 1.0.6 |
 | F5 | **Set up pedals** switches the firmware throttle cut off (report 6 `brakeCutoff`); verified on the rig: no restart, both pedals work together, stays off after SimHub restart and replug | 1.0.7 |
+| 8 | **Calibrate pedals**: live raw values from the params report (`PedalRawMonitor`), Start at rest → press → Finish; one block write (throttle raw range, brake rest, then Set up pedals); plugin calibration of all presets reset to full range | 1.0.8 (rig check pending) |
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-1. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
+1. **Rig-check 1.0.8: Calibrate pedals.** Pedal settings section → **Calibrate pedals** (live raw throttle/brake
+   shown) → feet off → **Start** → press throttle fully and brake firmly, let go → **Finish** → confirm. Check: status
+   says written and verified; at rest both pedals read 0 %, full throttle reaches ~100 %; the brake's kg readout still
+   matches; plugin calibration shows the full range. Simsonn Manager is then only needed for firmware updates.
+2. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
    level is active. Needs SimHub's car id and class from GameData.
-2. **Phase 8 – calibrate from the plugin** (was parked; now mapped, see manager-protocol.md). Live min/max per pedal from
-   the params report, rest → press → Finish; then one block write: raw_min (+6) = rest, throttle raw_max (+8) = full
-   press, brake raw_max from max force, output ends = raw range (no dead zone), the rest as **Set up pedals**. Needs F5.
-   After this, Simsonn Manager is only needed for firmware updates.
 3. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
    the brake pressed in the sim). Zeroing in End/ProcessExit isn't enough; an earlier exit-watchdog attempt was abandoned.
 4. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.

@@ -51,6 +51,7 @@ namespace SimsonnPedals.UI
             {
                 plugin.ActivePresetChanged -= OnActivePresetChanged;
                 CompositionTarget.Rendering -= OnRendering;
+                if (rawMonitor != null) StopCalibration();
             };
         }
 
@@ -292,7 +293,167 @@ namespace SimsonnPedals.UI
         }
 
         private void SetPedalButtonsEnabled(bool enabled) =>
-            ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = SetupPedalsButton.IsEnabled = enabled;
+            ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = SetupPedalsButton.IsEnabled =
+                CalibratePedalsButton.IsEnabled = enabled;
+
+        // Calibration of the pedals themselves: live raw values from the params report, rest → press → Finish.
+        private PedalRawMonitor rawMonitor;
+        private System.Windows.Threading.DispatcherTimer calibrationTimer;
+        private bool calibrationCapturing;
+
+        private void OnCalibratePedalsClick(object sender, RoutedEventArgs e)
+        {
+            if (plugin.IsGameRunning)
+            {
+                MessageBox.Show("Exit the game first: the pedals restart when the calibration is saved.", "SIMSONN Pedals");
+                return;
+            }
+            rawMonitor = PedalRawMonitor.Open(plugin.Settings.VendorId, plugin.Settings.ProductId, out string error);
+            if (rawMonitor == null)
+            {
+                PedalSettingsStatus.Text = "Can't calibrate: " + error;
+                return;
+            }
+            calibrationCapturing = false;
+            SetPedalButtonsEnabled(false);
+            ShowCalibrationButtons(true);
+            CalibrationStartButton.IsEnabled = true;
+            CalibrationFinishButton.IsEnabled = false;
+            PedalSettingsStatus.Text = "Close Simsonn Manager. Take your feet off both pedals, then click Start.";
+            calibrationTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            calibrationTimer.Tick += (s, a) => ShowCalibrationLive();
+            calibrationTimer.Start();
+        }
+
+        private void OnCalibrationStartClick(object sender, RoutedEventArgs e)
+        {
+            rawMonitor?.ResetRange();
+            calibrationCapturing = true;
+            CalibrationStartButton.IsEnabled = false;
+            CalibrationFinishButton.IsEnabled = true;
+            PedalSettingsStatus.Text = "Press the throttle all the way a few times and the brake firmly, let both go, then click Finish.";
+        }
+
+        private void ShowCalibrationLive()
+        {
+            if (rawMonitor == null) return;
+            string error = rawMonitor.Error;
+            if (error != null)
+            {
+                StopCalibration();
+                PedalSettingsStatus.Text = $"Calibration stopped: lost the pedals ({error}). Nothing was written.";
+                return;
+            }
+            var now = rawMonitor.Latest;
+            string text = $"Throttle {now[0],6}   Brake {now[1],6}";
+            if (calibrationCapturing && rawMonitor.Samples > 0)
+            {
+                int[] min = rawMonitor.Min, max = rawMonitor.Max;
+                text += $"   |   throttle {min[0]}…{max[0]}, brake {min[1]}…{max[1]}";
+            }
+            CalibrationLive.Text = text;
+        }
+
+        private void OnCalibrationCancelClick(object sender, RoutedEventArgs e)
+        {
+            StopCalibration();
+            PedalSettingsStatus.Text = "Calibration cancelled; nothing was written.";
+        }
+
+        private void StopCalibration()
+        {
+            calibrationTimer?.Stop();
+            calibrationTimer = null;
+            rawMonitor?.Dispose();
+            rawMonitor = null;
+            calibrationCapturing = false;
+            ShowCalibrationButtons(false);
+            CalibrationLive.Text = "";
+            SetPedalButtonsEnabled(true);
+        }
+
+        private void ShowCalibrationButtons(bool calibrating)
+        {
+            var shown = calibrating ? Visibility.Visible : Visibility.Collapsed;
+            CalibrationStartButton.Visibility = CalibrationFinishButton.Visibility = CalibrationCancelButton.Visibility = shown;
+            CalibratePedalsButton.Visibility = calibrating ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private async void OnCalibrationFinishClick(object sender, RoutedEventArgs e)
+        {
+            if (rawMonitor == null) return;
+            int samples = rawMonitor.Samples;
+            int[] min = rawMonitor.Min, max = rawMonitor.Max;
+            StopCalibration();
+            if (samples == 0)
+            {
+                PedalSettingsStatus.Text = "No sensor values arrived from the pedals; nothing was written.";
+                return;
+            }
+            if (!double.TryParse(SetupMaxForceBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double kg))
+            {
+                PedalSettingsStatus.Text = "Enter the brake max force in kg; nothing was written.";
+                return;
+            }
+
+            SetPedalButtonsEnabled(false);
+            PedalSettingsStatus.Text = "Reading the current settings…";
+            try
+            {
+                int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
+                var current = await Task.Run(() => PedalConfigReader.Read(vid, pid, "before calibration"));
+                if (!current.Success)
+                {
+                    PedalSettingsStatus.Text = "Nothing was written: " + current.Summary;
+                    return;
+                }
+
+                byte[] wanted;
+                try
+                {
+                    wanted = PedalSettingsLayout.Calibrate(current.Data, min[0], max[0], min[1], kg);
+                }
+                catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is NotSupportedException)
+                {
+                    // The message's second line is the parameter name.
+                    PedalSettingsStatus.Text = "Nothing was written: " + ex.Message.Split(new[] { Environment.NewLine }, StringSplitOptions.None)[0];
+                    return;
+                }
+
+                if (MessageBox.Show(
+                        "Now in the pedals:\n" + PedalSettingsLayout.DescribeCalibration(current.Data) + "\n" + PedalSettingsLayout.Describe(current.Data) +
+                        "\n\nAfter calibration:\n" + PedalSettingsLayout.DescribeCalibration(wanted) + "\n" + PedalSettingsLayout.Describe(wanted) +
+                        "\n\nThe plugin's own calibration in every preset goes back to the full range, since the pedals then report " +
+                        "0–100 % themselves. The pedals save and restart, so they drop off USB for a few seconds. " +
+                        "The current settings were saved to the dump folder. Write?",
+                        "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                {
+                    PedalSettingsStatus.Text = "Nothing was written.";
+                    return;
+                }
+
+                PedalSettingsStatus.Text = "Writing the calibration to the pedals…";
+                var result = await Task.Run(() => PedalConfigWriter.Write(vid, pid, current.Data, wanted, "calibration"));
+                if (result.Success)
+                {
+                    plugin.SetPedalMaxForce(kg);
+                    plugin.ResetPluginCalibration();
+                }
+                PedalSettingsStatus.Text = result.ReportPath == null ? result.Summary : $"{result.Summary} Report: {Path.GetFileName(result.ReportPath)}.";
+                if (result.Success)
+                    PedalSettingsStatus.Text += Environment.NewLine + PedalSettingsLayout.DescribeCalibration(wanted) +
+                                                Environment.NewLine + PedalSettingsLayout.Describe(wanted);
+            }
+            catch (Exception ex)
+            {
+                PedalSettingsStatus.Text = "Failed: " + ex.Message;
+            }
+            finally
+            {
+                SetPedalButtonsEnabled(true);
+            }
+        }
 
         private async void OnRewriteTestClick(object sender, RoutedEventArgs e)
         {
