@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>SimsonnPedals</RootNamespace>
+    <AssemblyName>SimsonnPedals</AssemblyName>
+    <!-- SimHub is a 32-bit process; AnyCPU loads fine into it. -->
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Version>0.1.0</Version>
+    <Nullable>disable</Nullable>
+    <SimHubPath Condition="'$(SIMHUB_INSTALL_PATH)' != ''">$(SIMHUB_INSTALL_PATH)</SimHubPath>
+    <SimHubPath Condition="'$(SimHubPath)' == ''">D:\stasiks\</SimHubPath>
+    <SimHubPath Condition="!HasTrailingSlash('$(SimHubPath)')">$(SimHubPath)\</SimHubPath>
+    <!-- Copy the built DLL into the local SimHub folder. Pass -p:DeployToSimHub=false to skip. -->
+    <DeployToSimHub Condition="'$(DeployToSimHub)' == ''">true</DeployToSimHub>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Everything below ships with SimHub, so none of it is copied to the output. -->
+    <Reference Include="SimHub.Plugins"><HintPath>$(SimHubPath)SimHub.Plugins.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SimHub.Logging"><HintPath>$(SimHubPath)SimHub.Logging.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameReaderCommon"><HintPath>$(SimHubPath)GameReaderCommon.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="WoteverCommon"><HintPath>$(SimHubPath)WoteverCommon.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="WoteverLocalization"><HintPath>$(SimHubPath)WoteverLocalization.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="MahApps.Metro"><HintPath>$(SimHubPath)MahApps.Metro.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="log4net"><HintPath>$(SimHubPath)log4net.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(SimHubPath)Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SharpDX"><HintPath>$(SimHubPath)SharpDX.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="HidSharp"><HintPath>$(SimHubPath)HidSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SharpDX.DirectInput"><HintPath>$(SimHubPath)SharpDX.DirectInput.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Built into the DLL so the plugin stays a single file. -->
+    <EmbeddedResource Include="Assets\header.gif" LogicalName="SimsonnPedals.header.gif" />
+  </ItemGroup>
+
+  <Target Name="DeployToSimHub" AfterTargets="Build" Condition="'$(DeployToSimHub)' == 'true' And Exists('$(SimHubPath)SimHubWPF.exe')">
+    <Copy SourceFiles="$(TargetDir)$(TargetName).dll;$(TargetDir)$(TargetName).pdb" DestinationFolder="$(SimHubPath)" ContinueOnError="true" />
+    <Message Importance="high" Text="Deployed $(TargetName).dll to $(SimHubPath)" />
+  </Target>
+
+</Project>

@@ -1,0 +1,152 @@
+<UserControl x:Class="SimsonnPedals.UI.PedalPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:styles="clr-namespace:SimHub.Plugins.Styles;assembly=SimHub.Plugins"
+             xmlns:local="clr-namespace:SimsonnPedals.UI">
+    <UserControl.Resources>
+        <Style TargetType="TextBlock" x:Key="Caption">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,10,0,4" />
+        </Style>
+        <Style TargetType="Button" x:Key="ShapeButton">
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+    </UserControl.Resources>
+
+    <Border BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="4" Padding="12" Margin="4">
+        <StackPanel>
+            <TextBlock x:Name="TitleText" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" />
+
+            <!-- Live values -->
+            <Grid Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <TextBlock Text="Position" Width="70" VerticalAlignment="Center" />
+                <local:LevelBar x:Name="PositionBar" Grid.Column="1" Height="8" VerticalAlignment="Center" />
+                <TextBlock x:Name="PositionText" Grid.Column="2" Width="90" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="1" Text="Output" Width="70" VerticalAlignment="Center" Margin="0,4,0,0" />
+                <local:LevelBar x:Name="OutputBar" Grid.Row="1" Grid.Column="1" Height="8" VerticalAlignment="Center" Margin="0,4,0,0" />
+                <TextBlock x:Name="OutputText" Grid.Row="1" Grid.Column="2" Width="90" TextAlignment="Right" VerticalAlignment="Center" Margin="0,4,0,0" />
+            </Grid>
+
+            <!-- Dead zone -->
+            <TextBlock Style="{StaticResource Caption}" Text="Dead zone (% of travel)" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="40" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <TextBlock Text="Start" VerticalAlignment="Center" />
+                <Slider Grid.Column="1" Minimum="0" Maximum="99" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1"
+                        Value="{Binding DeadzoneLow, Mode=TwoWay}" />
+                <TextBlock Grid.Column="2" Text="{Binding DeadzoneLow, StringFormat={}{0:0}}" TextAlignment="Right" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="1" Text="End" VerticalAlignment="Center" />
+                <Slider Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="100" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1"
+                        Value="{Binding DeadzoneHigh, Mode=TwoWay}" />
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding DeadzoneHigh, StringFormat={}{0:0}}" TextAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Curve -->
+            <DockPanel Margin="0,10,0,4">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding CurveShape}" Opacity="0.7" />
+                <TextBlock FontWeight="SemiBold" Text="Curve (drag points to customise)" />
+            </DockPanel>
+            <WrapPanel Margin="0,0,0,6">
+                <Button Style="{StaticResource ShapeButton}" Content="Linear" Tag="Linear" Click="OnShapeClick" />
+                <Button Style="{StaticResource ShapeButton}" Content="Regressive" Tag="Regressive" Click="OnShapeClick" />
+                <Button Style="{StaticResource ShapeButton}" Content="Progressive" Tag="Progressive" Click="OnShapeClick" />
+                <Button Style="{StaticResource ShapeButton}" Content="S-curve" Tag="SCurve" Click="OnShapeClick" />
+                <Button Style="{StaticResource ShapeButton}" Content="Inverse S" Tag="InverseS" Click="OnShapeClick" />
+            </WrapPanel>
+            <local:CurveEditor x:Name="Curve" Height="260" />
+
+            <!-- Filter -->
+            <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="40" />
+                </Grid.ColumnDefinitions>
+                <styles:SHToggleCheckbox IsChecked="{Binding FilterEnabled, Mode=TwoWay}" Content="Filter" Width="100" VerticalAlignment="Center" />
+                <Slider Grid.Column="1" Minimum="1" Maximum="10" IsSnapToTickEnabled="True" TickFrequency="1"
+                        IsEnabled="{Binding FilterEnabled}" Value="{Binding FilterLevel, Mode=TwoWay}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{Binding FilterLevel}" TextAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- Max force (load cell only) -->
+            <StackPanel x:Name="MaxForceSection" Visibility="Collapsed">
+                <TextBlock Style="{StaticResource Caption}" Text="Max force (kg)" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="70" />
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="50" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="100% at" VerticalAlignment="Center" />
+                    <Slider Grid.Column="1" Minimum="5" Maximum="{Binding FirmwareMaxForceKg}" SmallChange="1" LargeChange="5"
+                            IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding MaxForceKg, Mode=TwoWay}" VerticalAlignment="Center" />
+                    <TextBox Grid.Column="2" Text="{Binding MaxForceKg, StringFormat={}{0:0.#}}" TextAlignment="Right" Margin="6,2,0,2" />
+                    <TextBlock Grid.Row="1" Text="Pedal max" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" Opacity="0.7"
+                               Text="Max force set in Simsonn Manager (set it high there, choose your force here)" />
+                    <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding FirmwareMaxForceKg, StringFormat={}{0:0.#}}" TextAlignment="Right" Margin="6,2,0,2" />
+                </Grid>
+            </StackPanel>
+
+            <!-- Calibration -->
+            <TextBlock Style="{StaticResource Caption}" Text="Calibration" />
+            <DockPanel>
+                <Button x:Name="CalibrateButton" Content="Calibrate" Click="OnCalibrateClick" Padding="10,3" Margin="0,0,4,0" />
+                <Button Content="Reset" Click="OnResetCalibrationClick" Padding="10,3" Margin="0,0,8,0" />
+                <TextBlock x:Name="CalibrationText" VerticalAlignment="Center" TextWrapping="Wrap" Opacity="0.8" />
+            </DockPanel>
+
+            <!-- Game binding -->
+            <TextBlock Style="{StaticResource Caption}" Text="Bind in game" />
+            <DockPanel>
+                <Button x:Name="SweepButton" Content="Move vJoy axis" Click="OnSweepClick" Padding="10,3" Margin="0,0,8,0" />
+                <TextBlock x:Name="SweepText" VerticalAlignment="Center" TextWrapping="Wrap" Opacity="0.8"
+                           Text="Start the game's pedal calibration, click here, switch back and don't touch the pedals." />
+            </DockPanel>
+
+            <!-- Mapping -->
+            <Expander Header="Axis mapping" Margin="0,10,0,0">
+                <Grid Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition />
+                        <RowDefinition />
+                        <RowDefinition />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Pedal axis" VerticalAlignment="Center" />
+                    <ComboBox x:Name="SourceAxisCombo" Grid.Column="1" SelectedItem="{Binding SourceAxis, Mode=TwoWay}" Margin="0,2" />
+                    <TextBlock Grid.Row="1" Text="Invert" VerticalAlignment="Center" />
+                    <styles:SHToggleCheckbox Grid.Row="1" Grid.Column="1" IsChecked="{Binding Invert, Mode=TwoWay}" Margin="0,2" />
+                    <TextBlock Grid.Row="2" Text="vJoy axis" VerticalAlignment="Center" />
+                    <ComboBox x:Name="OutputAxisCombo" Grid.Row="2" Grid.Column="1" SelectedItem="{Binding OutputAxis, Mode=TwoWay}" Margin="0,2" />
+                </Grid>
+            </Expander>
+        </StackPanel>
+    </Border>
+</UserControl>

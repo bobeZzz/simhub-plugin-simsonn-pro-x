@@ -1,0 +1,77 @@
+<UserControl x:Class="SimsonnPedals.UI.SettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:styles="clr-namespace:SimHub.Plugins.Styles;assembly=SimHub.Plugins"
+             xmlns:local="clr-namespace:SimsonnPedals.UI">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <styles:SHSection Title="SIMSONN PRO X ULTRA" ShowSeparator="True">
+                    <StackPanel>
+                        <TextBlock x:Name="DeviceStatusText" FontWeight="SemiBold" />
+                        <TextBlock x:Name="VJoyStatusText" Margin="0,2,0,0" />
+                        <TextBlock x:Name="RawAxesText" Margin="0,2,0,0" Opacity="0.6" FontFamily="Consolas" />
+                        <styles:SHButtonSecondary HorizontalAlignment="Left" Margin="0,6,0,0" Click="OnReconnectClick"
+                                                  ToolTip="Close and reopen the pedals, as if the USB cable had been replugged">Reconnect pedals</styles:SHButtonSecondary>
+                        <TextBlock Margin="0,6,0,0" Opacity="0.7" TextWrapping="Wrap"
+                                   Text="Bind throttle and brake to the vJoy device in iRacing. Set the pedals to a linear curve, 0 dead zone and no filter in Simsonn Manager so the shaping isn't applied twice." />
+                    </StackPanel>
+                </styles:SHSection>
+                <local:GifImage Grid.Column="1" ResourceName="SimsonnPedals.header.gif" Width="112" Height="112"
+                                VerticalAlignment="Top" Margin="12,4,8,0" />
+            </Grid>
+
+            <styles:SHSection Title="PRESETS" ShowSeparator="True">
+                <StackPanel>
+                    <WrapPanel>
+                        <TextBlock Text="Active preset" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="PresetCombo" Width="200" SelectionChanged="OnPresetSelected" Margin="0,0,8,0" />
+                        <styles:SHButtonSecondary x:Name="DeleteButton" Click="OnDeleteClick">Delete</styles:SHButtonSecondary>
+                        <styles:SHButtonPrimary Click="OnSaveClick">Save</styles:SHButtonPrimary>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="Save as" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox x:Name="NewPresetName" Width="200" VerticalContentAlignment="Center" Margin="0,0,8,0" />
+                        <styles:SHButtonSecondary Click="OnSaveAsClick">Save as</styles:SHButtonSecondary>
+                        <styles:SHButtonSecondary x:Name="SaveForGameButton" Click="OnSaveForGameClick">Save for current game</styles:SHButtonSecondary>
+                    </WrapPanel>
+                    <styles:SHToggleCheckbox x:Name="AutoApplyToggle" Margin="0,8,0,0" Click="OnAutoApplyClick">
+                        Switch preset automatically when the game changes (falls back to Default)
+                    </styles:SHToggleCheckbox>
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="vJoy device" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="VJoyDeviceCombo" Width="60" SelectionChanged="OnVJoyDeviceChanged" />
+                    </WrapPanel>
+                </StackPanel>
+            </styles:SHSection>
+
+            <styles:SHSection Title="PEDAL FIRMWARE SETTINGS (READ-ONLY)" ShowSeparator="True">
+                <StackPanel>
+                    <TextBlock Opacity="0.7" TextWrapping="Wrap"
+                               Text="Downloads the settings stored in the pedals to a file, without changing anything. The pedals stop responding for about 2 seconds while it runs, so don't use it while driving." />
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="Label (optional)" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox x:Name="DumpLabel" Width="220" VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                 ToolTip="Describe the one change you made, e.g. brake deadzone start 10" />
+                        <styles:SHButtonSecondary x:Name="ReadPedalSettingsButton" Click="OnReadPedalSettingsClick">Read pedal settings</styles:SHButtonSecondary>
+                        <styles:SHButtonSecondary Click="OnOpenDumpFolderClick">Open folder</styles:SHButtonSecondary>
+                    </WrapPanel>
+                    <TextBlock x:Name="PedalSettingsStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </styles:SHSection>
+
+            <Grid Margin="0,4,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <local:PedalPanel x:Name="BrakePanel" Title="Brake" ShowMaxForce="True" />
+                <local:PedalPanel x:Name="ThrottlePanel" Grid.Column="1" Title="Throttle" />
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
