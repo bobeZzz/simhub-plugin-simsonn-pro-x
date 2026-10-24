@@ -32,6 +32,16 @@ namespace SimsonnPedals
             return hex.All(char.IsDigit) ? int.Parse(hex) : (int?)null;
         }
 
+        /// <summary>
+        /// True for firmware whose settings layout was mapped on the rig (2.0.x). Writes stay off on anything else,
+        /// e.g. 2.1.x after a firmware update, until a dump has been compared.
+        /// </summary>
+        public static bool IsLayoutVerified(byte[] block)
+        {
+            int? version = FirmwareVersionCode(block);
+            return version >= 200 && version <= 209;
+        }
+
         /// <summary>Firmware version for display, e.g. "2.0.8".</summary>
         public static string FirmwareVersionText(byte[] block)
         {
@@ -111,6 +121,10 @@ namespace SimsonnPedals
         /// </summary>
         public static byte[] BaseSetup(byte[] block, double brakeMaxForceKg)
         {
+            if (!IsLayoutVerified(block))
+                throw new NotSupportedException(
+                    $"The plugin's settings layout is only checked on firmware 2.0.x; these pedals run {FirmwareVersionText(block)}. " +
+                    "Use Read pedal settings and share the dump so the layout can be checked.");
             double unitsPerKg = UnitsPerKg(block) ?? throw new NotSupportedException(
                 $"The plugin doesn't know how firmware {FirmwareVersionText(block)} scales max force.");
             var result = (byte[])block.Clone();

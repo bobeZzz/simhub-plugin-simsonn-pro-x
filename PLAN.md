@@ -51,6 +51,22 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
+0. **Phase 9 – firmware update from the plugin: built in 1.0.9, rig check pending.**
+   - Protocol: `research/firmware-update.md`.
+   - Code: `FirmwareFile` reads and decrypts the `.sfu` files using the key from the user's Manager install, and checks
+     model and CRCs. `PedalFirmwareUpdater` does bootloader run → flasher report 5 → second chip report 7 → version
+     read-back.
+   - The UI section "Pedal firmware" offers the Manager's file (2.1.1) or an older one (2.0.8 rollback).
+   - Tested offline:
+     - decryption matches openssl;
+     - the flash exchange works against a simulated bootloader (success, CRC ERROR, timeout).
+   - To check on the rig, with Simsonn Manager kept installed as the fallback:
+     - the flasher appears (note its PID from the report);
+     - report 7 exists after 2.1.1;
+     - the versions read back;
+     - what 2.1.1 keeps of the settings, from Read pedal settings.
+   - Set up and Calibrate refuse anything but 2.0.x (`PedalSettingsLayout.IsLayoutVerified`) until a 2.1.1 dump has
+     been compared with 2.0.8.
 1. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
    level is active. Needs SimHub's car id and class from GameData.
 2. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave

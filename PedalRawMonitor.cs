@@ -29,6 +29,10 @@ namespace SimsonnPedals
         /// <summary>Packets with raw values received since <see cref="ResetRange"/>.</summary>
         public int Samples { get; private set; }
 
+        /// <summary>Main and second-chip firmware version words from the last params packet (0x2080 = 2.0.8, 0x0205 = 2.0.5).</summary>
+        public ushort MainVersionWord { get; private set; }
+        public ushort SubVersionWord { get; private set; }
+
         /// <summary>Set when the stream failed; the monitor has stopped.</summary>
         public string Error { get; private set; }
 
@@ -111,6 +115,8 @@ namespace SimsonnPedals
                     if (count < 6 + 2 * Channels || reply[0] != ReportIdParams || reply[1] != 0) continue;
                     lock (sync)
                     {
+                        MainVersionWord = BitConverter.ToUInt16(reply, 2);
+                        SubVersionWord = BitConverter.ToUInt16(reply, 4);
                         for (int i = 0; i < Channels; i++)
                         {
                             int raw = BitConverter.ToInt16(reply, 6 + 2 * i);
@@ -126,6 +132,28 @@ namespace SimsonnPedals
             {
                 if (running) Error = $"{ex.GetType().Name}: {ex.Message}";
             }
+        }
+
+        /// <summary>Version words the running firmware reports, or null if the pedals didn't answer within <paramref name="timeoutMs"/>.</summary>
+        public static (ushort Main, ushort Sub)? ReadVersions(int vendorId, int productId, int timeoutMs, out string error)
+        {
+            using (var monitor = Open(vendorId, productId, out error))
+            {
+                if (monitor == null) return null;
+                var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+                while (DateTime.UtcNow < deadline && monitor.Samples == 0 && monitor.Error == null) Thread.Sleep(50);
+                if (monitor.Samples > 0) return (monitor.MainVersionWord, monitor.SubVersionWord);
+                error = monitor.Error ?? "the pedals didn't report their firmware version.";
+                return null;
+            }
+        }
+
+        /// <summary>"2.0.8" from 0x2080 (main chip, as Simsonn Manager reads it) or "2.0.5" from 0x0205 (second chip).</summary>
+        public static string VersionText(ushort word, bool sub)
+        {
+            string hex = word.ToString("X4");
+            string digits = sub ? hex.Substring(1) : hex.Substring(0, 3);
+            return $"{digits[0]}.{digits[1]}.{digits[2]}";
         }
 
         public void Dispose()

@@ -89,6 +89,25 @@
                 </StackPanel>
             </styles:SHSection>
 
+            <styles:SHSection Title="PEDAL FIRMWARE" ShowSeparator="True">
+                <StackPanel>
+                    <TextBlock Opacity="0.7" TextWrapping="Wrap"
+                               Text="Updates the pedals' firmware with the files and key from your Simsonn Manager install, the same way the Manager does. Close Simsonn Manager and the game first, and don't unplug the pedals while it runs (about a minute)." />
+                    <WrapPanel Margin="0,8,0,0">
+                        <styles:SHButtonSecondary x:Name="CheckFirmwareButton" Click="OnCheckFirmwareClick"
+                                                  ToolTip="Reads the firmware version from the pedals and lists the firmware files Simsonn Manager has for them. Changes nothing.">Check firmware</styles:SHButtonSecondary>
+                        <styles:SHButtonSecondary x:Name="ChooseManagerButton" Click="OnChooseManagerClick"
+                                                  ToolTip="Point the plugin at SIMSONN Manager.exe if it wasn't found">Find Simsonn Manager…</styles:SHButtonSecondary>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="Firmware" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="FirmwareCombo" Width="340" Margin="0,0,8,0" />
+                        <styles:SHButtonPrimary x:Name="UpdateFirmwareButton" Click="OnUpdateFirmwareClick" IsEnabled="False">Update firmware</styles:SHButtonPrimary>
+                    </WrapPanel>
+                    <TextBlock x:Name="FirmwareStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </styles:SHSection>
+
             <styles:SHSection Title="PLUGIN UPDATES" ShowSeparator="True">
                 <StackPanel>
                     <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" />

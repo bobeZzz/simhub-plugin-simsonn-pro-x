@@ -495,6 +495,128 @@ namespace SimsonnPedals.UI
             Process.Start("explorer.exe", PedalConfigReader.OutputFolder);
         }
 
+        // Pedal firmware: Check reads the version and lists the Manager's files; Update flashes the chosen one.
+        private bool firmwareBusy;
+
+        private string ManagerFolder =>
+            FirmwareFile.IsManagerFolder(plugin.Settings.ManagerFolder) ? plugin.Settings.ManagerFolder : FirmwareFile.FindManagerFolder();
+
+        private async void OnCheckFirmwareClick(object sender, RoutedEventArgs e) => await CheckFirmware();
+
+        private async Task CheckFirmware()
+        {
+            if (firmwareBusy) return;
+            SetFirmwareBusy(true);
+            FirmwareStatus.Text = "Reading the firmware version and Simsonn Manager's firmware files…";
+            FirmwareCombo.ItemsSource = null;
+            try
+            {
+                int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
+                string folder = await Task.Run(() => ManagerFolder);
+                var log = new System.Text.StringBuilder();
+                var files = folder == null ? new System.Collections.Generic.List<FirmwareFile>() : await Task.Run(() => FirmwareFile.FindFor(pid, folder, log));
+                string versionError = null;
+                var versions = await Task.Run(() => PedalRawMonitor.ReadVersions(vid, pid, 3000, out versionError));
+
+                var lines = new System.Collections.Generic.List<string>
+                {
+                    versions == null
+                        ? "Pedals: couldn't read the firmware version (" + versionError + ")"
+                        : $"Pedals run firmware {PedalRawMonitor.VersionText(versions.Value.Main, false)}, second chip {PedalRawMonitor.VersionText(versions.Value.Sub, true)}."
+                };
+                if (folder == null)
+                    lines.Add("Simsonn Manager wasn't found. Use Find Simsonn Manager… to point at SIMSONN Manager.exe.");
+                else if (files.Count == 0)
+                    lines.Add($"No firmware files for these pedals in {folder}. {log}".Trim());
+                else
+                {
+                    lines.Add($"{files.Count} firmware file(s) from {folder}, all decrypted and checksum-checked. " +
+                              $"The first one is what Simsonn Manager installs; the others are older versions to go back to.");
+                    if (log.Length > 0) lines.Add(log.ToString().Trim());
+                }
+                FirmwareCombo.ItemsSource = files;
+                FirmwareCombo.SelectedIndex = files.Count > 0 ? 0 : -1;
+                FirmwareStatus.Text = string.Join(Environment.NewLine, lines);
+            }
+            catch (Exception ex)
+            {
+                FirmwareStatus.Text = "Failed: " + ex.Message;
+            }
+            finally
+            {
+                SetFirmwareBusy(false);
+            }
+        }
+
+        private async void OnChooseManagerClick(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Find SIMSONN Manager.exe",
+                Filter = "SIMSONN Manager|SIMSONN Manager.exe|Programs|*.exe",
+            };
+            if (dialog.ShowDialog() != true) return;
+            // The exe lives in <install>\bin; the firmware files in <install>\env.
+            string folder = Path.GetDirectoryName(Path.GetDirectoryName(dialog.FileName));
+            if (!FirmwareFile.IsManagerFolder(folder))
+            {
+                FirmwareStatus.Text = $"{folder} doesn't look like a Simsonn Manager install (no bin\\SSNetwork.dll or env\\firmware).";
+                return;
+            }
+            plugin.Settings.ManagerFolder = folder;
+            plugin.Save();
+            await CheckFirmware();
+        }
+
+        private async void OnUpdateFirmwareClick(object sender, RoutedEventArgs e)
+        {
+            if (!(FirmwareCombo.SelectedItem is FirmwareFile firmware) || firmwareBusy) return;
+            if (plugin.IsGameRunning)
+            {
+                MessageBox.Show("Exit the game first.", "SIMSONN Pedals");
+                return;
+            }
+            if (MessageBox.Show(
+                    $"Update the pedals to firmware {firmware.MainVersion} (second chip {firmware.SubVersion}) from {firmware.FileName}?\n\n" +
+                    "• Close Simsonn Manager first.\n" +
+                    "• The pedals restart into update mode and drop off USB; don't unplug them until this finishes (about a minute).\n" +
+                    "• Pedal settings, calibration and max force may be reset by the new firmware; check them afterwards.\n" +
+                    "• On firmware 2.1.x, Set up pedals and Calibrate pedals stay off until its settings layout has been checked.\n" +
+                    "• If it stops part way, the pedals stay in update mode: run the update again, here or in Simsonn Manager.",
+                    "SIMSONN Pedals – firmware update", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            SetFirmwareBusy(true);
+            SetPedalButtonsEnabled(false);
+            try
+            {
+                int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
+                var result = await Task.Run(() => PedalFirmwareUpdater.Update(vid, pid, firmware,
+                    line => Dispatcher.BeginInvoke(new Action(() => FirmwareStatus.Text = line))));
+                FirmwareStatus.Text = result.ReportPath == null ? result.Summary : $"{result.Summary}{Environment.NewLine}Report: {Path.GetFileName(result.ReportPath)}.";
+                if (result.Success)
+                    FirmwareStatus.Text += Environment.NewLine + "Use Read pedal settings to see what the new firmware kept.";
+                MessageBox.Show(result.Summary, "SIMSONN Pedals – firmware update", MessageBoxButton.OK,
+                    result.Success ? MessageBoxImage.Information : MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                FirmwareStatus.Text = "Failed: " + ex.Message;
+            }
+            finally
+            {
+                SetPedalButtonsEnabled(true);
+                SetFirmwareBusy(false);
+            }
+        }
+
+        private void SetFirmwareBusy(bool busy)
+        {
+            firmwareBusy = busy;
+            CheckFirmwareButton.IsEnabled = ChooseManagerButton.IsEnabled = FirmwareCombo.IsEnabled = !busy;
+            UpdateFirmwareButton.IsEnabled = !busy && FirmwareCombo.SelectedItem != null;
+        }
+
         private void ShowUpdateState(string message = null)
         {
             var current = PluginUpdater.CurrentVersion;

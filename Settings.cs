@@ -162,6 +162,9 @@ namespace SimsonnPedals
 
         public uint VJoyDeviceId { get; set; } = 1;
 
+        /// <summary>Simsonn Manager install folder chosen by hand, used for firmware files; null to find it automatically.</summary>
+        public string ManagerFolder { get; set; }
+
         /// <summary>Switch to the preset named after the running game when SimHub detects it.</summary>
         public bool AutoApplyPerGame { get; set; } = true;
 
