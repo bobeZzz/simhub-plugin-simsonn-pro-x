@@ -33,6 +33,10 @@ namespace SimsonnPedals.UI
             ClutchPanel.SweepKind = SweepPedal.Clutch;
             ClutchToggle.IsChecked = plugin.Settings.ClutchEnabled;
             ShowClutch();
+            updatingOutputMode = true;
+            OutputModeCombo.SelectedIndex = plugin.Settings.OutputMode == OutputMode.Direct ? 1 : 0;
+            updatingOutputMode = false;
+            ShowOutputMode();
 
             VJoyDeviceCombo.ItemsSource = Enumerable.Range(1, 16).Select(i => (uint)i).ToList();
             VJoyDeviceCombo.SelectedItem = plugin.Settings.VJoyDeviceId;
@@ -107,7 +111,104 @@ namespace SimsonnPedals.UI
             ThrottlePanel.Refresh(engine.DeviceConnected);
             if (plugin.Settings.ClutchEnabled) ClutchPanel.Refresh(engine.DeviceConnected);
             RefreshAssist(engine);
+            RefreshDirect();
         }
+
+        private bool updatingOutputMode;
+        private DateTime nextDirectRefresh;
+
+        private void RefreshDirect()
+        {
+            if (DateTime.UtcNow < nextDirectRefresh) return;
+            nextDirectRefresh = DateTime.UtcNow.AddMilliseconds(250);
+            // In vJoy mode the line keeps its last message (e.g. the result of leaving direct mode).
+            if (plugin.Settings.OutputMode != OutputMode.Direct) return;
+            var direct = plugin.Direct;
+            bool? holds = direct.Holds(plugin.ActivePreset, plugin.Settings.ClutchEnabled);
+            bool pendingEdits = holds == false && !direct.Busy;
+            string text = direct.Status + (pendingEdits ? " Edits not in the pedals yet: Save or Write to pedals." : "") +
+                          $" ({plugin.Settings.DirectWriteCount} settings writes so far.)";
+            if (DirectStatusText.Text != text) DirectStatusText.Text = text;
+            DirectStatusText.Foreground = pendingEdits ? ModifiedText.Foreground : VJoyStatusText.Foreground;
+        }
+
+        private async void OnOutputModeChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (updatingOutputMode || plugin == null) return;
+            var wanted = OutputModeCombo.SelectedIndex == 1 ? OutputMode.Direct : OutputMode.VJoy;
+            if (wanted == plugin.Settings.OutputMode) return;
+
+            if (wanted == OutputMode.Direct)
+            {
+                if (MessageBox.Show(
+                        "Direct mode writes the active preset into the pedals' own settings, so the game reads the shaped pedals without vJoy.\n\n" +
+                        "• In iRacing, bind throttle and brake (and clutch) to the SIMSONN pedals instead of vJoy.\n" +
+                        "• The pedals' settings are written when the preset switches and on Save; edits alone wait for Save or Write to pedals.\n" +
+                        "• Upshift cut, blip and the plugin's brake cut need vJoy and are off.\n\nSwitch to direct mode?",
+                        "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                {
+                    SetOutputModeCombo();
+                    return;
+                }
+                plugin.Settings.OutputMode = OutputMode.Direct;
+                plugin.RequestSave();
+                plugin.Direct.Invalidate();
+                plugin.Direct.Request("direct mode on");
+                ShowOutputMode();
+                return;
+            }
+
+            if (MessageBox.Show(
+                    "Back to vJoy: the pedals' settings are set back to neutral (linear, no dead zone, the brake's max force kept) and the plugin shapes them again. " +
+                    "Bind iRacing to vJoy again.\n\nContinue?", "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+            {
+                SetOutputModeCombo();
+                return;
+            }
+            OutputModeCombo.IsEnabled = false;
+            DirectStatusText.Foreground = VJoyStatusText.Foreground;
+            DirectStatusText.Text = "Setting the pedals back to neutral…";
+            plugin.Direct.Hold(true);
+            try
+            {
+                string result = await Task.Run(() => plugin.Direct.WriteNeutral());
+                DirectStatusText.Text = result;
+            }
+            catch (Exception ex)
+            {
+                DirectStatusText.Text = "Couldn't set the pedals back to neutral: " + ex.Message + " Use Set up pedals.";
+            }
+            finally
+            {
+                plugin.Settings.OutputMode = OutputMode.VJoy;
+                plugin.RequestSave();
+                plugin.Direct.Hold(false);
+                OutputModeCombo.IsEnabled = true;
+                ShowOutputMode();
+            }
+        }
+
+        private void SetOutputModeCombo()
+        {
+            updatingOutputMode = true;
+            OutputModeCombo.SelectedIndex = plugin.Settings.OutputMode == OutputMode.Direct ? 1 : 0;
+            updatingOutputMode = false;
+        }
+
+        private void ShowOutputMode()
+        {
+            bool direct = plugin.Settings.OutputMode == OutputMode.Direct;
+            WriteToPedalsButton.Visibility = direct ? Visibility.Visible : Visibility.Collapsed;
+            OutputNoteText.Text = direct
+                ? "Direct mode: the pedals do the shaping and the game is bound to them. The bars show what the pedals send. Calibrate with Calibrate pedals (below), not the panels' Calibrate."
+                : "vJoy mode: the plugin shapes the pedals and feeds vJoy; bind the game to vJoy.";
+            AssistSection.IsEnabled = !direct;
+            AssistSection.Opacity = direct ? 0.5 : 1;
+            foreach (var panel in new[] { BrakePanel, ThrottlePanel, ClutchPanel }) panel.DirectMode = direct;
+            checkedBindingsFor = null;
+        }
+
+        private void OnWriteToPedalsClick(object sender, RoutedEventArgs e) => plugin.Direct.Request("Write to pedals", verify: true);
 
         private ThrottleOverride lastOverride;
         private DateTime lastOverrideUntil;
@@ -211,6 +312,13 @@ namespace SimsonnPedals.UI
         {
             if (bindingCheckRunning || (!force && DateTime.UtcNow < nextBindingCheck)) return;
             nextBindingCheck = DateTime.UtcNow.AddSeconds(1);
+            if (plugin.Settings.OutputMode == OutputMode.Direct)
+            {
+                const string directText = "iRacing: in direct mode, bind throttle and brake (and clutch) to the SIMSONN pedals. The binding check doesn't cover direct mode yet.";
+                if (IRacingBindingText.Text != directText) IRacingBindingText.Text = directText;
+                IRacingBindingText.Foreground = VJoyStatusText.Foreground;
+                return;
+            }
             var preset = plugin.ActivePreset;
             bool clutch = plugin.Settings.ClutchEnabled;
             string key = $"{File.GetLastWriteTimeUtc(IRacingBindings.ControlsPath).Ticks}|{File.GetLastWriteTimeUtc(IRacingBindings.CalibrationPath).Ticks}|" +
@@ -506,10 +614,15 @@ namespace SimsonnPedals.UI
                    $"{(InputAxis)PedalSettingsLayout.BrakeAxis(block)} and {(InputAxis)PedalSettingsLayout.ClutchAxis(block)} in every preset (where firmware {PedalSettingsLayout.FirmwareVersionText(block)} sends them).";
         }
 
-        private void SetPedalButtonsEnabled(bool enabled) =>
+        private void SetPedalButtonsEnabled(bool enabled)
+        {
+            // Direct mode waits while anything else talks to the pedals, then writes the preset again.
+            plugin.Direct.Hold(!enabled);
+            WritePauseTestButton.IsEnabled = WriteToPedalsButton.IsEnabled = OutputModeCombo.IsEnabled = enabled;
             ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = SetupPedalsButton.IsEnabled =
                 CalibratePedalsButton.IsEnabled = LiveWriteTestButton.IsEnabled = MaxForceTestButton.IsEnabled =
                     BrakeCutTestButton.IsEnabled = enabled;
+        }
 
         // Calibration of the pedals themselves: live raw values from the params report, rest → press → Finish.
         private PedalRawMonitor rawMonitor;
@@ -734,6 +847,10 @@ namespace SimsonnPedals.UI
         private void OnMaxForceTestClick(object sender, RoutedEventArgs e) => RunDirectTest(
             "Live max force test: press the brake lightly (about 20–40 %) and hold it steady for about 10 s. The brake's max force is halved for a few seconds, then put back.",
             (engine, vid, pid, progress) => DirectModeTests.LiveMaxForce(engine, vid, pid, progress));
+
+        private void OnWritePauseTestClick(object sender, RoutedEventArgs e) => RunDirectTest(
+            "Write pause test: press the brake lightly and hold it for about 10 s. The pedals' settings are read and the same bytes written back, timing how long the pedals stop sending joystick reports. Nothing changes.",
+            (engine, vid, pid, progress) => DirectModeTests.WritePause(vid, pid, progress));
 
         private void OnBrakeCutTestClick(object sender, RoutedEventArgs e)
         {

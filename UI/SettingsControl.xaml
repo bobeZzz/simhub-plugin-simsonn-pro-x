@@ -30,6 +30,22 @@
                                 VerticalAlignment="Top" Margin="12,4,8,0" />
             </Grid>
 
+            <styles:SHSection Title="OUTPUT" ShowSeparator="True">
+                <StackPanel>
+                    <WrapPanel>
+                        <TextBlock Text="The game gets the pedals" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox x:Name="OutputModeCombo" Width="360" SelectionChanged="OnOutputModeChanged" Margin="0,0,8,0">
+                            <ComboBoxItem Content="through vJoy (shaped in the plugin)" />
+                            <ComboBoxItem Content="directly (shaped inside the pedals, no vJoy)" />
+                        </ComboBox>
+                        <styles:SHButtonSecondary x:Name="WriteToPedalsButton" Click="OnWriteToPedalsClick"
+                                                  ToolTip="Reads the pedals' settings and writes the active preset as it is now (unsaved edits too) if they differ">Write to pedals</styles:SHButtonSecondary>
+                    </WrapPanel>
+                    <TextBlock x:Name="DirectStatusText" Margin="0,6,0,0" TextWrapping="Wrap" />
+                    <TextBlock x:Name="OutputNoteText" Margin="0,4,0,0" Opacity="0.7" TextWrapping="Wrap" />
+                </StackPanel>
+            </styles:SHSection>
+
             <styles:SHSection Title="PRESETS" ShowSeparator="True">
                 <StackPanel>
                     <WrapPanel>
@@ -118,6 +134,8 @@
                         <TextBlock Text="at" VerticalAlignment="Center" Margin="4,0,4,0" />
                         <TextBox x:Name="BrakeCutTestBox" Width="40" Text="20" VerticalContentAlignment="Center" />
                         <TextBlock Text="% brake" VerticalAlignment="Center" Margin="4,0,0,0" />
+                        <styles:SHButtonSecondary x:Name="WritePauseTestButton" Click="OnWritePauseTestClick" Margin="8,0,0,0"
+                                                  ToolTip="Press the brake lightly and hold. Reads the pedals' settings and writes the same bytes back, timing how long the pedals' joystick reports stop during each. Changes nothing.">Write pause test</styles:SHButtonSecondary>
                     </WrapPanel>
                     <TextBlock x:Name="DirectTestStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
                 </StackPanel>

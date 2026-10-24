@@ -23,6 +23,12 @@ namespace SimsonnPedals.UI
 
         public PedalProcessor Processor { get; set; }
 
+        /// <summary>
+        /// Direct mode: the pedals shape the axis, so the bars show their output and the plugin's own calibration (which
+        /// works on the unshaped axis) is off; Calibrate pedals does it in the pedals.
+        /// </summary>
+        public bool DirectMode { get; set; }
+
         public PedalEngine Engine { get; set; }
 
         /// <summary>Which pedal this panel's binding sweep drives.</summary>
@@ -64,9 +70,11 @@ namespace SimsonnPedals.UI
             {
                 PositionBar.Value = Processor.Position;
                 OutputBar.Value = Processor.Output;
-                PositionText.Text = ShowMaxForce && config.HasForceScaling
-                    ? $"{Processor.Position * 100:0.0}% | {Processor.Position * config.FirmwareMaxForceKg:0.0} kg"
-                    : $"{Processor.Position * 100:0.0}%  ({Processor.Raw})";
+                PositionText.Text = DirectMode
+                    ? $"{Processor.Position * 100:0.0}% (pedals' output)"
+                    : ShowMaxForce && config.HasForceScaling
+                        ? $"{Processor.Position * 100:0.0}% | {Processor.Position * config.FirmwareMaxForceKg:0.0} kg"
+                        : $"{Processor.Position * 100:0.0}%  ({Processor.Raw})";
                 OutputText.Text = $"{Processor.Output * 100:0.0}%";
                 Curve.SetLive(Processor.CurveInput, Processor.Output);
             }
@@ -85,7 +93,13 @@ namespace SimsonnPedals.UI
                             : "Start the game's pedal calibration, click here, switch back and don't touch the pedals.";
             }
 
-            if (Processor.IsCalibrating)
+            CalibrateButton.IsEnabled = !DirectMode || Processor.IsCalibrating;
+            if (DirectMode && !Processor.IsCalibrating)
+            {
+                CalibrateButton.Content = "Calibrate";
+                CalibrationText.Text = "In direct mode use Calibrate pedals (Pedal firmware settings).";
+            }
+            else if (Processor.IsCalibrating)
             {
                 CalibrateButton.Content = "Finish";
                 CalibrationText.Text = $"Press the pedal fully a few times. Seen {Processor.CalibrationSeenMin} – {Processor.CalibrationSeenMax}";

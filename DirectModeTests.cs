@@ -200,6 +200,84 @@ namespace SimsonnPedals
             }
         }
 
+        /// <summary>
+        /// Phase D3: how long the pedals' joystick reports stop during a settings read and during a write on its own.
+        /// Listens to the joystick interface (MI_00) directly with HidSharp, so the gaps are between USB reports, not
+        /// value changes. Writes the block the pedals already hold, so nothing changes (one flash erase).
+        /// </summary>
+        public static DirectModeTestResult WritePause(int vendorId, int productId, Action<string> progress)
+        {
+            var report = new StringBuilder();
+            report.AppendLine($"SIMSONN direct mode test (D3): joystick pause during a read and a write, {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            var joystick = HidSharp.DeviceList.Local.GetHidDevices(vendorId, productId)
+                .FirstOrDefault(d => d.DevicePath.IndexOf("&mi_00", StringComparison.OrdinalIgnoreCase) >= 0);
+            if (joystick == null || !joystick.TryOpen(out HidSharp.HidStream stream))
+                return Finish("write-pause", "Couldn't open the pedals' joystick interface.", report);
+
+            var times = new List<double>();
+            var clock = Stopwatch.StartNew();
+            bool stop = false;
+            var listener = new Thread(() =>
+            {
+                var buffer = new byte[joystick.GetMaxInputReportLength()];
+                stream.ReadTimeout = 50;
+                while (!Volatile.Read(ref stop))
+                {
+                    try
+                    {
+                        if (stream.Read(buffer) > 0) lock (times) times.Add(clock.Elapsed.TotalMilliseconds);
+                    }
+                    catch (TimeoutException) { }
+                    catch (IOException) { Thread.Sleep(20); }
+                }
+            }) { IsBackground = true, Name = "SimsonnPedals D3 listener" };
+
+            using (stream)
+            {
+                listener.Start();
+                progress("Press the brake lightly and hold it. Listening to the pedals…");
+                Thread.Sleep(2000);
+                double readStart = clock.Elapsed.TotalMilliseconds;
+                progress("Reading the settings (keep holding)…");
+                var read = PedalConfigReader.Read(vendorId, productId, "direct test pause");
+                double readEnd = clock.Elapsed.TotalMilliseconds;
+                Thread.Sleep(1500);
+                string write;
+                double writeStart = clock.Elapsed.TotalMilliseconds, writeEnd = writeStart;
+                if (!read.Success) write = "skipped (the read failed: " + read.Summary + ")";
+                else
+                {
+                    progress("Writing the same settings back (keep holding)…");
+                    var result = PedalConfigWriter.WriteKnown(vendorId, productId, read.Data, "direct test pause");
+                    writeEnd = clock.Elapsed.TotalMilliseconds;
+                    write = result.Summary;
+                }
+                Thread.Sleep(1500);
+                Volatile.Write(ref stop, true);
+                listener.Join(500);
+
+                List<double> all;
+                lock (times) all = times.ToList();
+                string Gap(double from, double to)
+                {
+                    // Reports from just before the span to just after it, so a pause at either edge counts.
+                    var inside = all.Where(t => t >= from - 200 && t <= to + 200).ToList();
+                    if (inside.Count < 2) return "no reports";
+                    double gap = inside.Zip(inside.Skip(1), (a, b) => b - a).Max();
+                    return $"longest gap {gap:0} ms";
+                }
+                var baseline = all.Where(t => t < readStart).ToList();
+                double rate = baseline.Count < 2 ? 0 : (baseline.Count - 1) * 1000 / (baseline.Last() - baseline.First());
+                string summary = $"Joystick reports: {rate:0}/s, {Gap(0, readStart - 200)} normally; during a settings read ({readEnd - readStart:0} ms) " +
+                                 $"{Gap(readStart, readEnd)}; during a write ({writeEnd - writeStart:0} ms) {Gap(writeStart, writeEnd)}. Write: {write}";
+                report.AppendLine($"Read {readStart:0}–{readEnd:0} ms, write {writeStart:0}–{writeEnd:0} ms");
+                report.AppendLine($"{all.Count} joystick reports. Gaps of 15 ms or more (from, length):");
+                foreach (var gap in all.Zip(all.Skip(1), (a, b) => (a, b - a)).Where(g => g.Item2 >= 15))
+                    report.AppendLine($"  {gap.Item1,7:0} ms: {gap.Item2:0} ms");
+                return Finish("write-pause", summary, report);
+            }
+        }
+
         private static string Pct(double value) => $"{value / FullScale * 100:0} %";
 
         private static StringBuilder Start(string name, PedalEngine engine)

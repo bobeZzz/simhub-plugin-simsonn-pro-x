@@ -1,7 +1,7 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.20).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.21).
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -96,7 +96,14 @@ and reload the settings live (see [research/direct-mode.md](research/direct-mode
    firmware's invert bit; only shaping bytes change. Offline on the 2.1.1 and 2.0.8 dumps: firmware output within
    0.09 % of vJoy mode, no other bytes touched, no stacking, the default preset needs no write, export → import within
    0.35 %. See [research/direct-mode.md](research/direct-mode.md).
-3. **D3 – Output mode and writing.** Setting **Output: vJoy / Direct to pedals**. Direct mode doesn't acquire vJoy
+3. **D3 – Output mode and writing. Built (1.0.21), rig check pending.** Output setting vJoy / directly; direct mode
+   releases vJoy, skips shift cut and blip, bars show the pedals' output, the panels' Calibrate is off. `DirectWriter`
+   reads the pedals once, then writes from that block (`WriteKnown`: no reads, no report file) when direct mode turns
+   on, the preset switches, on Save, and on Write to pedals (which reads first); edits alone show "Edits not in the
+   pedals yet". Other pedal operations hold it and it writes again after them; it re-reads after a replug and retries
+   failures every 5 s. Leaving direct mode writes the pedals back to neutral. Writes are counted in the settings.
+   **Write pause test** times the joystick gap during a read and a write (HID reports on MI_00).
+   Original plan, kept for reference: Setting **Output: vJoy / Direct to pedals**. Direct mode doesn't acquire vJoy
    or start the exit guard; the engine still reads the pedals for the bars. A write reads the block first and skips it
    when nothing changes (no needless restart or flash write). Writes happen on **Write to pedals**, on Save, and on an
    automatic preset switch while no game is running. Status line: which preset the pedals hold, and since when.

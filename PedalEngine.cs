@@ -175,9 +175,17 @@ namespace SimsonnPedals
                         var s = settings();
                         double now = clock.Elapsed.TotalMilliseconds;
 
-                        vjoy.Ensure(s.VJoyDeviceId, now);
-                        VJoyStatus = vjoy.Status;
-                        bool ready = vjoy.IsReady;
+                        bool direct = s.OutputMode == OutputMode.Direct;
+                        if (direct)
+                        {
+                            // The game reads the pedals themselves; let go of vJoy (at 0) so nothing else is fed.
+                            vjoy.Release();
+                            sweepActive = SweepPedal.None;
+                            sweepRequest = 0;
+                        }
+                        else vjoy.Ensure(s.VJoyDeviceId, now);
+                        VJoyStatus = direct ? "not used in direct mode (the game reads the pedals)" : vjoy.Status;
+                        bool ready = !direct && vjoy.IsReady;
                         if (ready && !VJoyReady)
                         {
                             // Freshly acquired: clear whatever an earlier session or feeder left on these axes.
@@ -265,6 +273,16 @@ namespace SimsonnPedals
                         var preset = activePreset;
                         if (preset == null) continue;
 
+                        if (direct)
+                        {
+                            ThrottleSent = Throttle.ShowDirect(ReadAxis(state, preset.Throttle.SourceAxis));
+                            Brake.ShowDirect(ReadAxis(state, preset.Brake.SourceAxis));
+                            if (s.ClutchEnabled) Clutch.ShowDirect(ReadAxis(state, preset.Clutch.SourceAxis));
+                            Override = ThrottleOverride.None;
+                            CountUpdate(now, ref rateWindowStart, ref rateCount);
+                            continue;
+                        }
+
                         double throttle = Throttle.Process(preset.Throttle, ReadAxis(state, preset.Throttle.SourceAxis));
                         double brake = Brake.Process(preset.Brake, ReadAxis(state, preset.Brake.SourceAxis));
                         bool clutchOn = s.ClutchEnabled;
@@ -316,13 +334,7 @@ namespace SimsonnPedals
                         vjoy.SetAxis(preset.Brake.OutputAxis, brake);
                         if (clutchOn) vjoy.SetAxis(preset.Clutch.OutputAxis, clutch);
 
-                        rateCount++;
-                        if (now - rateWindowStart >= 1000)
-                        {
-                            UpdateRate = rateCount * 1000.0 / (now - rateWindowStart);
-                            rateWindowStart = now;
-                            rateCount = 0;
-                        }
+                        CountUpdate(now, ref rateWindowStart, ref rateCount);
                     }
                     catch (Exception ex)
                     {
@@ -372,6 +384,15 @@ namespace SimsonnPedals
             DeviceName = device.ProductName.Trim();
             SimHub.Logging.Current.Info($"[SimsonnPedals] Connected to {DeviceName}");
             return joystick;
+        }
+
+        private void CountUpdate(double now, ref double rateWindowStart, ref int rateCount)
+        {
+            rateCount++;
+            if (now - rateWindowStart < 1000) return;
+            UpdateRate = rateCount * 1000.0 / (now - rateWindowStart);
+            rateWindowStart = now;
+            rateCount = 0;
         }
 
         /// <summary>Time (ms on <see cref="clock"/>) of a paddle press not yet handled, or NaN if none or too old.</summary>

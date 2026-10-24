@@ -87,6 +87,18 @@ namespace SimsonnPedals
 
         public void CancelCalibration() => calibrating = false;
 
+        /// <summary>
+        /// Direct mode: the pedals shape the axis themselves, so their output is the final value. The position before
+        /// shaping isn't known here, so it shows the output too, and the curve gets no live marker.
+        /// </summary>
+        public double ShowDirect(int raw)
+        {
+            Raw = raw;
+            Output = Position = PedalMath.Clamp01(raw / (double)PedalConfig.RawMax);
+            CurveInput = double.NaN;
+            return Output;
+        }
+
         public double Process(PedalConfig config, int raw)
         {
             Raw = raw;

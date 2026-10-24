@@ -19,6 +19,13 @@ namespace SimsonnPedals
     [JsonConverter(typeof(StringEnumConverter))]
     public enum CurveShape { Linear, Regressive, Progressive, SCurve, InverseS, Custom }
 
+    /// <summary>
+    /// Where the shaping happens: in the plugin, sent to the game through vJoy; or written into the pedals' own settings
+    /// (direct mode), with the game bound to the pedals themselves.
+    /// </summary>
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum OutputMode { VJoy, Direct }
+
     public abstract class Observable : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -215,6 +222,11 @@ namespace SimsonnPedals
 
         /// <summary>A clutch pedal is connected: shape it and feed its vJoy axis too.</summary>
         public bool ClutchEnabled { get; set; }
+
+        public OutputMode OutputMode { get; set; } = OutputMode.VJoy;
+
+        /// <summary>Settings writes done by direct mode, all time: each one erases the pedals' settings flash once.</summary>
+        public int DirectWriteCount { get; set; }
 
         /// <summary>Simsonn Manager install folder chosen by hand, used for firmware files; null to find it automatically.</summary>
         public string ManagerFolder { get; set; }

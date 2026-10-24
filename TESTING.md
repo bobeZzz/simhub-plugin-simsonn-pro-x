@@ -53,6 +53,22 @@ Every new release adds its checks here.
 - [ ] Paddle-to-cut delay feels fine (SimHub reads the paddles, then the plugin). If the cut lands late, say so.
 - [ ] Old presets load with all three off and aren't marked unsaved.
 
+### 1.0.21 – Direct mode (D3, no vJoy)
+Close Simsonn Manager first.
+- [ ] **Write pause test** (Pedal firmware settings → Direct mode tests): hold the brake lightly ~10 s. Send the result
+      line and `direct-test-*-write-pause.txt`: it times how long the pedals stop sending during a read and a write.
+- [ ] **Output → "directly (shaped inside the pedals, no vJoy)"**, confirm. Within a few seconds the status says
+      "The pedals hold <preset> (written …)". The vJoy line says "not used in direct mode".
+- [ ] In iRacing bind throttle and brake to the SIMSONN pedals (not vJoy). They respond, with the preset's dead zones
+      and curve (same feel as in vJoy mode).
+- [ ] Change a dead zone: the status turns amber, "Edits not in the pedals yet". Press **Save** (or **Write to
+      pedals**): it goes back to "The pedals hold …" and the change is felt in the game.
+- [ ] Switch preset (or drive a car with its own preset): the pedals get it within a second or two, while driving,
+      with no dropout.
+- [ ] Restart SimHub in direct mode: it reads the pedals once (about 2 s pause) and says the pedals hold the preset.
+- [ ] Back to **"through vJoy"**, confirm: "The pedals are back to neutral …". Rebind iRacing to vJoy; vJoy mode works
+      as before.
+
 ## Older, still open
 - [ ] **Save / Revert** (1.0.5): edit, Save, edit again, Revert returns to the saved values; Save as moves the edits to
       the new preset.

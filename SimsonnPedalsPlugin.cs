@@ -30,6 +30,9 @@ namespace SimsonnPedals
 
         public PedalEngine Engine { get; private set; }
 
+        /// <summary>Writes the active preset into the pedals in direct mode.</summary>
+        public DirectWriter Direct { get; private set; }
+
         /// <summary>Game SimHub currently has selected, or null before the first update.</summary>
         public string CurrentGameName => lastGameName;
 
@@ -61,6 +64,8 @@ namespace SimsonnPedals
 
             Engine = new PedalEngine(() => Settings) { ActivePreset = ActivePreset };
             Engine.Start();
+            Direct = new DirectWriter(this);
+            Direct.Request("SimHub started");
             // Backup for exits that skip End(): vJoy keeps its last values, so the pedals must be zeroed before we go.
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
 
@@ -89,6 +94,7 @@ namespace SimsonnPedals
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
             IsGameRunning = data.GameRunning;
+            Direct?.Tick();
             var game = data.GameName;
             string carId = data.NewData?.CarId, carModel = data.NewData?.CarModel, carClass = data.NewData?.CarClass;
 
@@ -167,6 +173,7 @@ namespace SimsonnPedals
         public void End(PluginManager pluginManager)
         {
             AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
+            Direct?.Dispose();
             Engine?.Dispose();
             autosaveTimer?.Dispose();
             Save();
@@ -246,6 +253,7 @@ namespace SimsonnPedals
                 modifiedCache.Clear();
             }
             Save();
+            Direct?.Request("save");
         }
 
         /// <summary>Puts the active preset back to its last Save.</summary>
@@ -347,6 +355,7 @@ namespace SimsonnPedals
             }
             SimHub.Logging.Current.Info($"[SimsonnPedals] Active preset: {name}");
             ActivePresetChanged?.Invoke();
+            Direct?.Request("preset " + name);
         }
 
         /// <summary>

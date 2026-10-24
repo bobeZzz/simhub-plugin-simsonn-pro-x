@@ -39,6 +39,45 @@ namespace SimsonnPedals
         private const int VendorIdOffset = 0x3EE;
         private const int ProductIdOffset = 0x3F0;
 
+        // No answer comes after the last packet unless the pedals refuse it, and a refusal comes at once.
+        private const int LastPacketWaitFastMs = 300;
+
+        /// <summary>
+        /// Raised (on the writing thread) when the pedals accepted a write: its label and the bytes now in the pedals.
+        /// Direct mode uses it to notice writes made by anything else.
+        /// </summary>
+        public static event Action<string, byte[]> Written;
+
+        /// <summary>
+        /// Direct mode's write: <paramref name="settings"/> goes out without re-reading the pedals first or reading back
+        /// afterwards, since both reads pause the pedals' joystick reports for about 2 s. The caller made the block from
+        /// settings it read earlier. No report file; the log gets one line.
+        /// </summary>
+        public static PedalConfigWriteResult WriteKnown(int vendorId, int productId, byte[] settings, string label)
+        {
+            var report = new StringBuilder();
+            string problem = Validate(vendorId, productId, settings, settings);
+            if (problem != null)
+                return Finish(label, false, false, "Nothing was written: " + problem, report, saveReport: false);
+            var interfaces = PedalConfigReader.FindInterfaces(DeviceList.Local.GetHidDevices(vendorId, productId), ReportIdConfigOut, report);
+            if (interfaces.Count != 1)
+                return Finish(label, false, false, $"Nothing was written: expected one settings interface, found {interfaces.Count}.", report, saveReport: false);
+            string error;
+            bool sent;
+            try
+            {
+                sent = SendAll(interfaces[0], settings, settings.Length / Payload, report, out error, LastPacketWaitFastMs);
+            }
+            catch (Exception ex)
+            {
+                return Finish(label, false, false, $"Nothing was saved: {ex.GetType().Name}: {ex.Message}", report, saveReport: false);
+            }
+            if (!sent) return Finish(label, false, false, "Nothing was saved: " + error, report, saveReport: false);
+            if (error != null) return Finish(label, false, true, error, report, saveReport: false);
+            Written?.Invoke(label, (byte[])settings.Clone());
+            return Finish(label, true, true, "Written.", report, saveReport: false);
+        }
+
         /// <summary>
         /// Reads the settings, writes the same bytes back and reads them again. Proves the write path without
         /// changing anything; both reads are saved like any other dump.
@@ -94,9 +133,10 @@ namespace SimsonnPedals
                 return Finish(label, false, false, "Nothing was saved: " + error, report);
             if (error != null)
                 return Finish(label, false, true, error, report);
+            Written?.Invoke(label, (byte[])settings.Clone());
 
-            // The pedals restart to load the new settings; give them time, then check what they kept.
-            report.AppendLine("Last packet sent; waiting for the pedals to restart.");
+            // The pedals save and reload the settings (no restart, research/direct-mode.md); then check what they kept.
+            report.AppendLine("Last packet sent; waiting before reading back.");
             Thread.Sleep(RestartWaitMs);
             PedalConfigReadResult after = null;
             for (int attempt = 1; attempt <= ReadBackAttempts; attempt++)
@@ -139,7 +179,8 @@ namespace SimsonnPedals
         /// <paramref name="error"/>. Returns true once the last packet is out; <paramref name="error"/> is then set
         /// only if the pedals refused it.
         /// </summary>
-        private static bool SendAll(HidDevice device, byte[] settings, int packets, StringBuilder report, out string error)
+        private static bool SendAll(HidDevice device, byte[] settings, int packets, StringBuilder report, out string error,
+            int lastPacketWaitMs = AckTimeoutMs)
         {
             error = null;
             if (!device.TryOpen(out HidStream stream))
@@ -171,7 +212,7 @@ namespace SimsonnPedals
                 for (int packet = 1; packet <= packets; packet++)
                 {
                     bool last = packet == packets;
-                    int next = Exchange(stream, request, reply, packet, settings, last);
+                    int next = Exchange(stream, request, reply, packet, settings, last, last ? lastPacketWaitMs : AckTimeoutMs);
                     if (last)
                     {
                         // Usually no answer at all: the pedals are already saving and restarting.
@@ -194,7 +235,7 @@ namespace SimsonnPedals
         }
 
         /// <summary>Sends one CONFIG_OUT packet and returns the packet number the pedals ask for next, or -1 for no answer.</summary>
-        private static int Exchange(HidStream stream, byte[] request, byte[] reply, int packet, byte[] settings, bool last = false)
+        private static int Exchange(HidStream stream, byte[] request, byte[] reply, int packet, byte[] settings, bool last = false, int waitMs = AckTimeoutMs)
         {
             Array.Clear(request, 0, request.Length);
             request[0] = ReportIdConfigOut;
@@ -202,7 +243,7 @@ namespace SimsonnPedals
             if (packet > 0) Array.Copy(settings, (packet - 1) * Payload, request, 2, Payload);
             stream.Write(request);
 
-            var deadline = DateTime.UtcNow.AddMilliseconds(AckTimeoutMs);
+            var deadline = DateTime.UtcNow.AddMilliseconds(waitMs);
             while (DateTime.UtcNow < deadline)
             {
                 int count;
@@ -228,10 +269,10 @@ namespace SimsonnPedals
         private static string Describe(int answer) =>
             answer < 0 ? "no answer" : answer == VersionMismatch ? "[4, 0xFE] (version mismatch)" : $"[4, {answer}]";
 
-        private static PedalConfigWriteResult Finish(string label, bool success, bool sent, string summary, StringBuilder report)
+        private static PedalConfigWriteResult Finish(string label, bool success, bool sent, string summary, StringBuilder report, bool saveReport = true)
         {
             var result = new PedalConfigWriteResult { Success = success, Sent = sent, Summary = summary };
-            try
+            if (saveReport) try
             {
                 Directory.CreateDirectory(PedalConfigReader.OutputFolder);
                 report.Insert(0, $"Result: {summary}{Environment.NewLine}");
@@ -243,7 +284,8 @@ namespace SimsonnPedals
             {
                 result.Summary += $" (Could not save the report: {ex.Message})";
             }
-            SimHub.Logging.Current.Info($"[SimsonnPedals] Settings write ({label}): {result.Summary}");
+            SimHub.Logging.Current.Info($"[SimsonnPedals] Settings write ({label}): {result.Summary}" +
+                                        (saveReport || success ? "" : Environment.NewLine + report));
             return result;
         }
     }
