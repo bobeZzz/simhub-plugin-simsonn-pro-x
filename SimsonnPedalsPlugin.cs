@@ -43,8 +43,15 @@ namespace SimsonnPedals
 
         public PedalPreset ActivePreset => Settings.Presets[Settings.ActivePresetName];
 
+        /// <summary>Result of the last update check this session, or null if none has run.</summary>
+        public ReleaseInfo LatestRelease { get; set; }
+
+        /// <summary>Version installed by the updater this session, waiting for a SimHub restart.</summary>
+        public Version PendingUpdateVersion { get; set; }
+
         public void Init(PluginManager pluginManager)
         {
+            PluginUpdater.CleanUpOldFiles();
             Settings = this.ReadCommonSettings(SettingsKey, () => new PluginSettings());
             Settings.EnsureValid();
             autosaveTimer = new Timer(_ => OnAutosaveDue(), null, Timeout.Infinite, Timeout.Infinite);

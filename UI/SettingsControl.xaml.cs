@@ -41,6 +41,9 @@ namespace SimsonnPedals.UI
                 plugin.ActivePresetChanged += OnActivePresetChanged;
                 BindActivePreset();
                 CompositionTarget.Rendering += OnRendering;
+                ShowUpdateState();
+                // One automatic check per SimHub session, the first time this page opens.
+                if (plugin.LatestRelease == null && plugin.PendingUpdateVersion == null) CheckForUpdates(quiet: true);
             };
             Unloaded += (s, e) =>
             {
@@ -165,6 +168,99 @@ namespace SimsonnPedals.UI
         {
             Directory.CreateDirectory(PedalConfigReader.OutputFolder);
             Process.Start("explorer.exe", PedalConfigReader.OutputFolder);
+        }
+
+        private void ShowUpdateState(string message = null)
+        {
+            var current = PluginUpdater.CurrentVersion;
+            var latest = plugin.LatestRelease;
+            bool available = latest != null && latest.Version > current && latest.DownloadUrl != null && plugin.PendingUpdateVersion == null;
+
+            InstallUpdateButton.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+            InstallUpdateButton.Content = available ? $"Update to {latest.Version}" : "Update";
+            RestartButton.Visibility = plugin.PendingUpdateVersion != null ? Visibility.Visible : Visibility.Collapsed;
+
+            if (message == null)
+            {
+                if (plugin.PendingUpdateVersion != null)
+                    message = $"Version {plugin.PendingUpdateVersion} is installed and loads when SimHub restarts. You'll be asked to approve the changed plugin.";
+                else if (available)
+                    message = $"Version {latest.Version} is available (you have {current}).";
+                else if (latest != null)
+                    message = $"Version {current} is the latest.";
+                else
+                    message = $"Version {current}.";
+            }
+            UpdateStatusText.Text = message;
+        }
+
+        private async void CheckForUpdates(bool quiet)
+        {
+            CheckUpdatesButton.IsEnabled = false;
+            if (!quiet) ShowUpdateState("Checking GitHub for updates…");
+            try
+            {
+                plugin.LatestRelease = await Task.Run(PluginUpdater.GetLatestRelease);
+                ShowUpdateState(plugin.LatestRelease == null ? $"Version {PluginUpdater.CurrentVersion}. No releases published yet." : null);
+            }
+            catch (Exception ex)
+            {
+                SimHub.Logging.Current.Warn($"[SimsonnPedals] Update check failed: {ex.Message}");
+                // A failed background check shouldn't look like an error on every page open.
+                ShowUpdateState(quiet ? null : "Couldn't check for updates: " + ex.Message);
+            }
+            finally
+            {
+                CheckUpdatesButton.IsEnabled = true;
+            }
+        }
+
+        private void OnCheckUpdatesClick(object sender, RoutedEventArgs e) => CheckForUpdates(quiet: false);
+
+        private async void OnInstallUpdateClick(object sender, RoutedEventArgs e)
+        {
+            var release = plugin.LatestRelease;
+            if (release == null) return;
+            if (plugin.IsGameRunning &&
+                MessageBox.Show("A game is running. The update only takes effect after SimHub restarts. Download it now?",
+                    "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                return;
+
+            InstallUpdateButton.IsEnabled = CheckUpdatesButton.IsEnabled = false;
+            ShowUpdateState($"Downloading version {release.Version}…");
+            try
+            {
+                await Task.Run(() => PluginUpdater.Install(release));
+                plugin.PendingUpdateVersion = release.Version;
+                ShowUpdateState();
+                if (!plugin.IsGameRunning &&
+                    MessageBox.Show($"Version {release.Version} is installed. Restart SimHub now to load it?",
+                        "SIMSONN Pedals", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    Restart();
+            }
+            catch (Exception ex)
+            {
+                SimHub.Logging.Current.Error("[SimsonnPedals] Update failed", ex);
+                ShowUpdateState("Update failed: " + ex.Message);
+            }
+            finally
+            {
+                InstallUpdateButton.IsEnabled = CheckUpdatesButton.IsEnabled = true;
+            }
+        }
+
+        private void OnRestartClick(object sender, RoutedEventArgs e) => Restart();
+
+        private void Restart()
+        {
+            if (!PluginUpdater.TryRestartSimHub())
+                ShowUpdateState("Couldn't restart SimHub automatically. Exit it from the tray icon and start it again to finish the update.");
+        }
+
+        private void OnReleaseNotesClick(object sender, RoutedEventArgs e)
+        {
+            var url = plugin.LatestRelease?.PageUrl ?? PluginUpdater.RepositoryUrl + "/releases";
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
 
         private void OnVJoyDeviceChanged(object sender, SelectionChangedEventArgs e)

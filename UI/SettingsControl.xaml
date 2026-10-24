@@ -64,6 +64,18 @@
                 </StackPanel>
             </styles:SHSection>
 
+            <styles:SHSection Title="PLUGIN UPDATES" ShowSeparator="True">
+                <StackPanel>
+                    <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" />
+                    <WrapPanel Margin="0,8,0,0">
+                        <styles:SHButtonSecondary x:Name="CheckUpdatesButton" Click="OnCheckUpdatesClick">Check for updates</styles:SHButtonSecondary>
+                        <styles:SHButtonPrimary x:Name="InstallUpdateButton" Click="OnInstallUpdateClick" Visibility="Collapsed">Update</styles:SHButtonPrimary>
+                        <styles:SHButtonPrimary x:Name="RestartButton" Click="OnRestartClick" Visibility="Collapsed">Restart SimHub</styles:SHButtonPrimary>
+                        <styles:SHButtonSecondary x:Name="ReleaseNotesButton" Click="OnReleaseNotesClick">Release notes</styles:SHButtonSecondary>
+                    </WrapPanel>
+                </StackPanel>
+            </styles:SHSection>
+
             <Grid Margin="0,4,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition />

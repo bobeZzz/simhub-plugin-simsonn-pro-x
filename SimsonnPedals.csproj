@@ -9,7 +9,8 @@
     <!-- SimHub is a 32-bit process; AnyCPU loads fine into it. -->
     <PlatformTarget>AnyCPU</PlatformTarget>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-    <Version>0.1.0</Version>
+    <!-- The release script sets this; the updater compares it with the newest GitHub release tag. -->
+    <Version>1.0.0</Version>
     <Nullable>disable</Nullable>
     <SimHubPath Condition="'$(SIMHUB_INSTALL_PATH)' != ''">$(SIMHUB_INSTALL_PATH)</SimHubPath>
     <SimHubPath Condition="'$(SimHubPath)' == ''">D:\stasiks\</SimHubPath>
