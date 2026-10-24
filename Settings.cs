@@ -165,8 +165,20 @@ namespace SimsonnPedals
         /// <summary>Simsonn Manager install folder chosen by hand, used for firmware files; null to find it automatically.</summary>
         public string ManagerFolder { get; set; }
 
-        /// <summary>Switch to the preset named after the running game when SimHub detects it.</summary>
+        /// <summary>
+        /// Switch preset automatically: the one saved for the current car, else its class, else the preset named after
+        /// the game, else Default.
+        /// </summary>
         public bool AutoApplyPerGame { get; set; } = true;
+
+        /// <summary>Preset saved for a car, keyed by <see cref="CarKey"/> ("game|car id").</summary>
+        public Dictionary<string, string> CarPresets { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Preset saved for a car class, keyed by <see cref="CarKey"/> ("game|class").</summary>
+        public Dictionary<string, string> ClassPresets { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Key for <see cref="CarPresets"/> / <see cref="ClassPresets"/>: car ids and class names are only unique within a game.</summary>
+        public static string CarKey(string game, string carOrClass) => $"{game}|{carOrClass}";
 
         public string ActivePresetName { get; set; } = DefaultPresetName;
 
@@ -194,6 +206,13 @@ namespace SimsonnPedals
             foreach (var preset in SavedPresets.Values) preset.EnsureValid();
             foreach (var name in Presets.Keys.Where(n => !SavedPresets.ContainsKey(n)).ToList())
                 SavedPresets[name] = Presets[name].Clone();
+            // Car and class links: case-insensitive, and only to presets that still exist.
+            Dictionary<string, string> Links(Dictionary<string, string> links) => (links ?? new Dictionary<string, string>())
+                .Where(p => p.Value != null && Presets.ContainsKey(p.Value))
+                .ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+            CarPresets = Links(CarPresets);
+            ClassPresets = Links(ClassPresets);
+
             if (string.IsNullOrEmpty(ActivePresetName) || !Presets.ContainsKey(ActivePresetName)) ActivePresetName = DefaultPresetName;
             if (VJoyDeviceId < 1 || VJoyDeviceId > 16) VJoyDeviceId = 1;
         }

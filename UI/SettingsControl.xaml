@@ -41,11 +41,16 @@
                         <TextBlock Text="Save as" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <TextBox x:Name="NewPresetName" Width="200" VerticalContentAlignment="Center" Margin="0,0,8,0" />
                         <styles:SHButtonSecondary Click="OnSaveAsClick">Save as</styles:SHButtonSecondary>
+                        <styles:SHButtonSecondary x:Name="SaveForCarButton" Click="OnSaveForCarClick"
+                                                  ToolTip="Save the current values as a preset named after this car; it's picked whenever you drive this car">Save for this car</styles:SHButtonSecondary>
+                        <styles:SHButtonSecondary x:Name="SaveForClassButton" Click="OnSaveForClassClick"
+                                                  ToolTip="Save the current values as a preset for this car's class; it's picked for every car in the class without its own preset">Save for this class</styles:SHButtonSecondary>
                         <styles:SHButtonSecondary x:Name="SaveForGameButton" Click="OnSaveForGameClick">Save for current game</styles:SHButtonSecondary>
                     </WrapPanel>
                     <styles:SHToggleCheckbox x:Name="AutoApplyToggle" Margin="0,8,0,0" Click="OnAutoApplyClick">
-                        Switch preset automatically when the game changes (falls back to Default)
+                        Switch preset automatically: this car's preset, else its class, else the game's, else Default
                     </styles:SHToggleCheckbox>
+                    <TextBlock x:Name="AutoPresetText" Margin="0,4,0,0" TextWrapping="Wrap" Opacity="0.7" />
                     <WrapPanel Margin="0,8,0,0">
                         <TextBlock Text="vJoy device" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <ComboBox x:Name="VJoyDeviceCombo" Width="60" SelectionChanged="OnVJoyDeviceChanged" />

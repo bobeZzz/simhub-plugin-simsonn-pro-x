@@ -52,8 +52,14 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-1. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
-   level is active. Needs SimHub's car id and class from GameData.
+1. **Phase 3 – per-car presets: built in 1.0.13, rig check pending.**
+   - Lookup order: car → class → game → Default. Links are `CarPresets` / `ClassPresets`, keyed "game|car id" and
+     "game|class". SimHub supplies `GameData.NewData.CarId` / `CarModel` / `CarClass`.
+   - The last car is kept through menus, and the lookup reruns once per game / car / class change.
+   - New buttons: "Save for <car>" and "Save for <class> class", which save as a named preset and link it. A line
+     shows the game and car, the automatic choice and why, and whether the preset in use was picked by hand.
+   - Deleting a preset drops its links. Tested offline: lookup order, case, a stale link dropped.
+   - Rig check: car and class names show for iRacing; switching cars picks the right preset.
 2. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
    the brake pressed in the sim). Zeroing in End/ProcessExit isn't enough; an earlier exit-watchdog attempt was abandoned.
 3. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.

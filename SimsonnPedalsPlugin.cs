@@ -82,10 +82,38 @@ namespace SimsonnPedals
         {
             IsGameRunning = data.GameRunning;
             var game = data.GameName;
-            if (game == lastGameName) return;
-            lastGameName = game;
-            if (Settings.AutoApplyPerGame) ApplyPresetForGame(game);
+            string carId = data.NewData?.CarId, carModel = data.NewData?.CarModel, carClass = data.NewData?.CarClass;
+
+            if (game != lastGameName)
+            {
+                lastGameName = game;
+                CurrentCarId = CurrentCarModel = CurrentCarClass = null;
+            }
+            // Keep the last car while the game reports none (menus, loading), so the preset doesn't flip back and forth.
+            if (!string.IsNullOrEmpty(carId))
+            {
+                CurrentCarId = carId;
+                CurrentCarModel = string.IsNullOrEmpty(carModel) ? carId : carModel;
+                CurrentCarClass = string.IsNullOrEmpty(carClass) ? null : carClass;
+            }
+            if (game == appliedForGame && CurrentCarId == appliedForCar && CurrentCarClass == appliedForClass) return;
+            appliedForGame = game;
+            appliedForCar = CurrentCarId;
+            appliedForClass = CurrentCarClass;
+            if (Settings.AutoApplyPerGame) ApplyAutoPreset();
         }
+
+        // What the automatic preset was last applied for, so it runs once per game / car change.
+        private string appliedForGame, appliedForCar, appliedForClass;
+
+        /// <summary>SimHub's id of the car in use (kept through menus), or null before one is known in this game.</summary>
+        public string CurrentCarId { get; private set; }
+
+        /// <summary>The car's display name (falls back to its id).</summary>
+        public string CurrentCarModel { get; private set; }
+
+        /// <summary>The car's class, or null if the game reports none.</summary>
+        public string CurrentCarClass { get; private set; }
 
         private void OnProcessExit(object sender, EventArgs e) => Engine?.Dispose();
 
@@ -192,11 +220,68 @@ namespace SimsonnPedals
             modifiedCache.Clear();
         }
 
-        public void ApplyPresetForGame(string game)
+        /// <summary>Where the automatic choice found its preset.</summary>
+        public enum PresetLevel { Car, Class, Game, Default }
+
+        /// <summary>
+        /// The preset for this game and car: the one saved for the car, else for its class, else the preset named after
+        /// the game, else Default.
+        /// </summary>
+        public string ResolvePreset(string game, string carId, string carClass, out PresetLevel level)
         {
             lock (presetLock)
-                ActivatePreset(!string.IsNullOrEmpty(game) && Settings.Presets.ContainsKey(game) ? game : PluginSettings.DefaultPresetName);
+            {
+                if (!string.IsNullOrEmpty(game))
+                {
+                    if (!string.IsNullOrEmpty(carId) && Settings.CarPresets.TryGetValue(PluginSettings.CarKey(game, carId), out var forCar) &&
+                        Settings.Presets.ContainsKey(forCar))
+                    {
+                        level = PresetLevel.Car;
+                        return forCar;
+                    }
+                    if (!string.IsNullOrEmpty(carClass) && Settings.ClassPresets.TryGetValue(PluginSettings.CarKey(game, carClass), out var forClass) &&
+                        Settings.Presets.ContainsKey(forClass))
+                    {
+                        level = PresetLevel.Class;
+                        return forClass;
+                    }
+                    if (Settings.Presets.ContainsKey(game))
+                    {
+                        level = PresetLevel.Game;
+                        return game;
+                    }
+                }
+                level = PresetLevel.Default;
+                return PluginSettings.DefaultPresetName;
+            }
         }
+
+        /// <summary>Activates the preset <see cref="ResolvePreset"/> picks for the current game and car.</summary>
+        public void ApplyAutoPreset() => ActivatePreset(ResolvePreset(CurrentGameName, CurrentCarId, CurrentCarClass, out _));
+
+        /// <summary>Saves the current values as a preset named after the car and links it to this car.</summary>
+        public void SaveForCurrentCar()
+        {
+            string game = CurrentGameName, carId = CurrentCarId;
+            if (string.IsNullOrEmpty(game) || string.IsNullOrEmpty(carId)) return;
+            string name = CurrentCarModel ?? carId;
+            SaveActiveAs(name);
+            lock (presetLock) Settings.CarPresets[PluginSettings.CarKey(game, carId)] = name;
+            Save();
+        }
+
+        /// <summary>Saves the current values as a preset named after the car's class and links it to that class.</summary>
+        public void SaveForCurrentClass()
+        {
+            string game = CurrentGameName, carClass = CurrentCarClass;
+            if (string.IsNullOrEmpty(game) || string.IsNullOrEmpty(carClass)) return;
+            string name = ClassPresetName(carClass);
+            SaveActiveAs(name);
+            lock (presetLock) Settings.ClassPresets[PluginSettings.CarKey(game, carClass)] = name;
+            Save();
+        }
+
+        public static string ClassPresetName(string carClass) => $"{carClass} class";
 
         public void ActivatePreset(string name)
         {
@@ -292,6 +377,10 @@ namespace SimsonnPedals
                 Untrack(preset);
                 Settings.Presets.Remove(name);
                 Settings.SavedPresets.Remove(name);
+                // Cars and classes linked to it fall back to the next level.
+                foreach (var links in new[] { Settings.CarPresets, Settings.ClassPresets })
+                foreach (var key in links.Where(l => string.Equals(l.Value, name, StringComparison.OrdinalIgnoreCase)).Select(l => l.Key).ToList())
+                    links.Remove(key);
                 modifiedCache.Clear();
                 if (string.Equals(Settings.ActivePresetName, name, StringComparison.OrdinalIgnoreCase)) Settings.ActivePresetName = null;
             }

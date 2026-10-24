@@ -86,6 +86,13 @@ namespace SimsonnPedals.UI
             var game = plugin.CurrentGameName;
             SaveForGameButton.IsEnabled = !string.IsNullOrEmpty(game);
             SaveForGameButton.Content = string.IsNullOrEmpty(game) ? "Save for current game" : $"Save for {game}";
+            string car = plugin.CurrentCarModel, carClass = plugin.CurrentCarClass;
+            SaveForCarButton.IsEnabled = !string.IsNullOrEmpty(game) && plugin.CurrentCarId != null;
+            SaveForCarButton.Content = SaveForCarButton.IsEnabled ? $"Save for {car}" : "Save for this car";
+            SaveForClassButton.IsEnabled = !string.IsNullOrEmpty(game) && carClass != null;
+            SaveForClassButton.Content = SaveForClassButton.IsEnabled ? $"Save for {carClass} class" : "Save for this class";
+            string autoText = DescribeAutoPreset();
+            if (AutoPresetText.Text != autoText) AutoPresetText.Text = autoText;
 
             RefreshModified();
             BrakePanel.Refresh(engine.DeviceConnected);
@@ -146,6 +153,43 @@ namespace SimsonnPedals.UI
             plugin.SaveActiveAs(game);
         }
 
+        private void OnSaveForCarClick(object sender, RoutedEventArgs e)
+        {
+            string name = plugin.CurrentCarModel;
+            if (name == null || !ConfirmOverwrite(name)) return;
+            plugin.SaveForCurrentCar();
+        }
+
+        private void OnSaveForClassClick(object sender, RoutedEventArgs e)
+        {
+            if (plugin.CurrentCarClass == null) return;
+            if (!ConfirmOverwrite(SimsonnPedalsPlugin.ClassPresetName(plugin.CurrentCarClass))) return;
+            plugin.SaveForCurrentClass();
+        }
+
+        private bool ConfirmOverwrite(string name) =>
+            string.Equals(plugin.Settings.ActivePresetName, name, StringComparison.OrdinalIgnoreCase) ||
+            !plugin.Settings.Presets.ContainsKey(name) ||
+            MessageBox.Show($"Overwrite preset \"{name}\" with the current settings?", "SIMSONN Pedals", MessageBoxButton.YesNo) == MessageBoxResult.Yes;
+
+        /// <summary>One line: the game and car SimHub sees, and which preset the automatic choice gives them.</summary>
+        private string DescribeAutoPreset()
+        {
+            string game = plugin.CurrentGameName;
+            if (string.IsNullOrEmpty(game)) return "No game selected in SimHub.";
+            string car = plugin.CurrentCarModel == null ? "no car yet"
+                : plugin.CurrentCarClass == null ? plugin.CurrentCarModel : $"{plugin.CurrentCarModel} ({plugin.CurrentCarClass})";
+            string auto = plugin.ResolvePreset(game, plugin.CurrentCarId, plugin.CurrentCarClass, out var level);
+            string why = level == SimsonnPedalsPlugin.PresetLevel.Car ? "saved for this car"
+                : level == SimsonnPedalsPlugin.PresetLevel.Class ? "saved for this class"
+                : level == SimsonnPedalsPlugin.PresetLevel.Game ? $"saved for {game}"
+                : "nothing saved for this car, class or game";
+            string text = $"{game}: {car}. Automatic choice: \"{auto}\" ({why}).";
+            if (!string.Equals(auto, plugin.Settings.ActivePresetName, StringComparison.OrdinalIgnoreCase))
+                text += $" In use now: \"{plugin.Settings.ActivePresetName}\", picked by hand.";
+            return text;
+        }
+
         private void OnDeleteClick(object sender, RoutedEventArgs e)
         {
             var name = plugin.Settings.ActivePresetName;
@@ -157,7 +201,7 @@ namespace SimsonnPedals.UI
         {
             plugin.Settings.AutoApplyPerGame = AutoApplyToggle.IsChecked == true;
             plugin.RequestSave();
-            if (plugin.Settings.AutoApplyPerGame) plugin.ApplyPresetForGame(plugin.CurrentGameName);
+            if (plugin.Settings.AutoApplyPerGame) plugin.ApplyAutoPreset();
         }
 
         private async void OnReadPedalSettingsClick(object sender, RoutedEventArgs e)
