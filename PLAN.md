@@ -46,28 +46,22 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | 2 | Save / Revert with unsaved marker; Save as moves edits to the new preset | 1.0.5 (rig check pending) |
 | – | Max force units/kg from the firmware version (300 for 2.0.x, 148 for 2.1.x, refuse others) | 1.0.6 |
 | F5 | **Read pedal settings** also reads throttle cut, elastomer, raw sensors (report 6) and 3 s of params reports; rig-checked: report 6 and params layout confirmed, firmware throttle cut found on at 10 % | 1.0.6 |
-| F5 | **Set up pedals** switches the firmware throttle cut off (report 6 `brakeCutoff`) | 1.0.7 (rig check pending) |
+| F5 | **Set up pedals** switches the firmware throttle cut off (report 6 `brakeCutoff`); verified on the rig: no restart, both pedals work together, stays off after SimHub restart and replug | 1.0.7 |
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-1. **Rig-check 1.0.7: Set up pedals switches the firmware throttle cut off.** It was on at 10 % brake, so the pedals
-   zeroed the throttle whenever the brake was pressed (user saw only one pedal when pressing both). Setup now reads the
-   cut (`readBrakeCutoff`), lists it in the confirmation, sends `brakeCutoff` with enabled 0 (threshold kept, live, no
-   restart; `PedalCommandWriter` can send nothing else) and reads it back; report `pedal-command-*-throttle-cut-off.txt`.
-   Check on the rig: the status says "off"; the pedals don't restart; both pedals work together; **Read pedal settings**
-   still says off after a SimHub restart and after unplugging the pedals (does the firmware persist it?).
-2. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
+1. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
    level is active. Needs SimHub's car id and class from GameData.
-3. **Phase 8 – calibrate from the plugin** (was parked; now mapped, see manager-protocol.md). Live min/max per pedal from
+2. **Phase 8 – calibrate from the plugin** (was parked; now mapped, see manager-protocol.md). Live min/max per pedal from
    the params report, rest → press → Finish; then one block write: raw_min (+6) = rest, throttle raw_max (+8) = full
    press, brake raw_max from max force, output ends = raw range (no dead zone), the rest as **Set up pedals**. Needs F5.
    After this, Simsonn Manager is only needed for firmware updates.
-4. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
+3. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
    the brake pressed in the sim). Zeroing in End/ProcessExit isn't enough; an earlier exit-watchdog attempt was abandoned.
-5. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.
-6. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
-7. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
-8. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
+4. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.
+5. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
+6. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
+7. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
 
 ## Maybe / parked
 - **Live brake max force** (report 6 `damping_max`, sent by the Manager while the spinner moves). If it applies without
