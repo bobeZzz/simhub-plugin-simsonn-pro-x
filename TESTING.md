@@ -53,21 +53,14 @@ Every new release adds its checks here.
 - [ ] Paddle-to-cut delay feels fine (SimHub reads the paddles, then the plugin). If the cut lands late, say so.
 - [ ] Old presets load with all three off and aren't marked unsaved.
 
+### 1.0.22 – Write pause test, measured properly
+- [ ] **Write pause test** again (hold the brake lightly ~12 s). Send the result line and
+      `direct-test-*-write-pause.txt`. 1.0.21's summary missed the silences: its raw data shows the pedals stopping
+      for about 2.1 s from the start of a settings read, and going quiet at the write without coming back before the
+      test ended. This version listens 4 s longer and reports each silence in full.
+
 ### 1.0.21 – Direct mode (D3, no vJoy)
-Close Simsonn Manager first.
-- [ ] **Write pause test** (Pedal firmware settings → Direct mode tests): hold the brake lightly ~10 s. Send the result
-      line and `direct-test-*-write-pause.txt`: it times how long the pedals stop sending during a read and a write.
-- [ ] **Output → "directly (shaped inside the pedals, no vJoy)"**, confirm. Within a few seconds the status says
-      "The pedals hold <preset> (written …)". The vJoy line says "not used in direct mode".
-- [ ] In iRacing bind throttle and brake to the SIMSONN pedals (not vJoy). They respond, with the preset's dead zones
-      and curve (same feel as in vJoy mode).
-- [ ] Change a dead zone: the status turns amber, "Edits not in the pedals yet". Press **Save** (or **Write to
-      pedals**): it goes back to "The pedals hold …" and the change is felt in the game.
-- [ ] Switch preset (or drive a car with its own preset): the pedals get it within a second or two, while driving,
-      with no dropout.
 - [ ] Restart SimHub in direct mode: it reads the pedals once (about 2 s pause) and says the pedals hold the preset.
-- [ ] Back to **"through vJoy"**, confirm: "The pedals are back to neutral …". Rebind iRacing to vJoy; vJoy mode works
-      as before.
 
 ## Older, still open
 - [ ] **Save / Revert** (1.0.5): edit, Save, edit again, Revert returns to the saved values; Save as moves the edits to
@@ -78,6 +71,9 @@ Close Simsonn Manager first.
       to vJoy instead.
 
 ## Passed
+- 1.0.21 – Direct mode, 2026-10-24: switched on, the pedals got the preset; iRacing bound to the pedals felt the same
+  as vJoy mode; edit + Save reached the game; preset switch while driving with no dropout noticed; back to vJoy wrote
+  the pedals neutral (85 kg kept) and vJoy mode works. (The neutral message stayed amber: fixed in 1.0.22.)
 - 1.0.20 – Direct mode tests (D1) on firmware 2.1.1, 2026-10-24: live write applied with the pedals connected; live
   max force applied in about 0.2 s and saved; firmware brake cut works (the page wrongly said "Didn't cut", fixed in
   the next release); settings put back exactly every time.

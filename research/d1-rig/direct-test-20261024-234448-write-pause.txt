@@ -1,0 +1,5 @@
+Result: Joystick reports: 500/s, longest gap 4 ms normally; during a settings read (681 ms) longest gap 3 ms; during a write (342 ms) longest gap 2 ms. Write: Written.
+SIMSONN direct mode test (D3): joystick pause during a read and a write, 2026-10-24 23:44:42
+Read 2001–2681 ms, write 4182–4523 ms
+1056 joystick reports. Gaps of 15 ms or more (from, length):
+     2004 ms: 2075 ms

@@ -183,6 +183,8 @@ namespace SimsonnPedals.UI
                 plugin.Settings.OutputMode = OutputMode.VJoy;
                 plugin.RequestSave();
                 plugin.Direct.Hold(false);
+                // The status may have turned amber ("edits not in the pedals") while the neutral write ran.
+                DirectStatusText.Foreground = VJoyStatusText.Foreground;
                 OutputModeCombo.IsEnabled = true;
                 ShowOutputMode();
             }
@@ -849,7 +851,7 @@ namespace SimsonnPedals.UI
             (engine, vid, pid, progress) => DirectModeTests.LiveMaxForce(engine, vid, pid, progress));
 
         private void OnWritePauseTestClick(object sender, RoutedEventArgs e) => RunDirectTest(
-            "Write pause test: press the brake lightly and hold it for about 10 s. The pedals' settings are read and the same bytes written back, timing how long the pedals stop sending joystick reports. Nothing changes.",
+            "Write pause test: press the brake lightly and hold it for about 12 s. The pedals' settings are read and the same bytes written back, timing how long the pedals stop sending joystick reports. Nothing changes.",
             (engine, vid, pid, progress) => DirectModeTests.WritePause(vid, pid, progress));
 
         private void OnBrakeCutTestClick(object sender, RoutedEventArgs e)

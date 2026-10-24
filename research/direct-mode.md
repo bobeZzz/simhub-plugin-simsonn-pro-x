@@ -101,6 +101,19 @@ For D3: in direct mode the pedals already output the shaped value, so the plugin
 should show the pedals' output, and the calibration capture must work on the neutral frame (or set the pedals neutral
 while calibrating).
 
+## D3 rig run (1.0.21, 2026-10-24 23:44, firmware 2.1.1)
+Direct mode worked end to end (switch on, feel matches vJoy mode, Save writes, preset switch while driving, back to
+neutral). **Write pause test** raw data (`d1-rig/direct-test-20261024-234448-write-pause.txt`): joystick reports
+(MI_00) at 500/s, normally no gap over 4 ms. A **settings read** stopped them for **2075 ms**, starting the moment
+the read began (the read itself took 681 ms, so the pause outlasts it by 1.4 s). At the **write** (started at
+4182 ms) the reports had stopped by about 4.19 s and hadn't come back when the test ended at 6.0 s: at least
+1.8 s. The 1.0.21 summary ("longest gap 3 ms / 2 ms") was wrong: it only looked at gaps that started and ended
+inside the read/write span. 1.0.22 measures silences that overlap the span and listens 4 s after the write.
+
+So far: **reads and writes both pause the pedals' joystick reports for about 2 s**, even though the pedals stay
+connected and the settings apply live. Not felt as a dropout when switching presets while driving, but a 2 s
+freeze at the wrong moment matters: D4 should write only while the car is stopped (pits, garage) or not on track.
+
 **D1 result:** writes and `damping_max` apply live and the pedals stay connected, so direct mode doesn't need to
 avoid writing while driving. Open for D3: how long a *write alone* (no reads around it) pauses the joystick reports.
 Direct mode should write from the block it already holds, without re-reading each time, and the D3 test should time

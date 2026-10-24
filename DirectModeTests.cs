@@ -252,28 +252,35 @@ namespace SimsonnPedals
                     writeEnd = clock.Elapsed.TotalMilliseconds;
                     write = result.Summary;
                 }
-                Thread.Sleep(1500);
+                // Long enough after the write to see the reports come back.
+                Thread.Sleep(4000);
+                double end = clock.Elapsed.TotalMilliseconds;
                 Volatile.Write(ref stop, true);
                 listener.Join(500);
 
                 List<double> all;
                 lock (times) all = times.ToList();
+                // Every silence between reports, plus the one from the last report to the end of the test.
+                var gaps = all.Zip(all.Skip(1), (a, b) => (From: a, To: b)).ToList();
+                if (all.Count > 0) gaps.Add((all.Last(), end));
                 string Gap(double from, double to)
                 {
-                    // Reports from just before the span to just after it, so a pause at either edge counts.
-                    var inside = all.Where(t => t >= from - 200 && t <= to + 200).ToList();
-                    if (inside.Count < 2) return "no reports";
-                    double gap = inside.Zip(inside.Skip(1), (a, b) => b - a).Max();
-                    return $"longest gap {gap:0} ms";
+                    // The longest silence overlapping the span, wherever it started or ended.
+                    var touching = gaps.Where(g => g.To >= from && g.From <= to).ToList();
+                    if (touching.Count == 0) return "no reports";
+                    var longest = touching.OrderByDescending(g => g.To - g.From).First();
+                    string tail = longest.To >= end ? ", and the reports hadn't come back when the test ended" : "";
+                    return $"longest silence {longest.To - longest.From:0} ms (from {longest.From - from:+0;-0} ms after it began{tail})";
                 }
                 var baseline = all.Where(t => t < readStart).ToList();
                 double rate = baseline.Count < 2 ? 0 : (baseline.Count - 1) * 1000 / (baseline.Last() - baseline.First());
-                string summary = $"Joystick reports: {rate:0}/s, {Gap(0, readStart - 200)} normally; during a settings read ({readEnd - readStart:0} ms) " +
-                                 $"{Gap(readStart, readEnd)}; during a write ({writeEnd - writeStart:0} ms) {Gap(writeStart, writeEnd)}. Write: {write}";
-                report.AppendLine($"Read {readStart:0}–{readEnd:0} ms, write {writeStart:0}–{writeEnd:0} ms");
-                report.AppendLine($"{all.Count} joystick reports. Gaps of 15 ms or more (from, length):");
-                foreach (var gap in all.Zip(all.Skip(1), (a, b) => (a, b - a)).Where(g => g.Item2 >= 15))
-                    report.AppendLine($"  {gap.Item1,7:0} ms: {gap.Item2:0} ms");
+                string normal = baseline.Count < 2 ? "no reports" : $"longest gap {baseline.Zip(baseline.Skip(1), (a, b) => b - a).Max():0} ms";
+                string summary = $"Joystick reports: {rate:0}/s, {normal} normally. Settings read ({readEnd - readStart:0} ms): " +
+                                 $"{Gap(readStart, readEnd)}. Write ({writeEnd - writeStart:0} ms): {Gap(writeStart, writeEnd)}. Write: {write}";
+                report.AppendLine($"Read {readStart:0}–{readEnd:0} ms, write {writeStart:0}–{writeEnd:0} ms, end {end:0} ms");
+                report.AppendLine($"{all.Count} joystick reports, first {all.FirstOrDefault():0} ms, last {all.LastOrDefault():0} ms. Silences of 15 ms or more (from, length):");
+                foreach (var gap in gaps.Where(g => g.To - g.From >= 15))
+                    report.AppendLine($"  {gap.From,7:0} ms: {gap.To - gap.From:0} ms{(gap.To >= end ? " (to the end)" : "")}");
                 return Finish("write-pause", summary, report);
             }
         }
