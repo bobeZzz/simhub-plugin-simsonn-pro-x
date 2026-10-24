@@ -14,18 +14,21 @@ namespace SimsonnPedals
         public string Summary { get; set; }
         public string BinaryPath { get; set; }
         public string ReportPath { get; set; }
+
+        /// <summary>The settings block as read, or null if the read failed.</summary>
+        public byte[] Data { get; set; }
     }
 
     /// <summary>
     /// Read-only download of the settings stored in the pedals. Simsonn's firmware is derived from FreeJoy, which
     /// returns its settings block in 62-byte packets when the host sends a CONFIG_IN request naming the packet.
-    /// This class only ever sends that request; it never writes settings or firmware.
+    /// This class only ever sends that request; writing is <see cref="PedalConfigWriter"/>'s job.
     /// </summary>
     public static class PedalConfigReader
     {
-        // FreeJoy report IDs: 1 joystick, 2 params, 3 config in, 4 config out, 5 firmware. Only 3 is ever sent.
+        // FreeJoy report IDs: 1 joystick, 2 params, 3 config in, 4 config out, 5 firmware. Only 3 is sent here.
         private const byte ReportIdConfigIn = 3;
-        private const int PayloadPerPacket = 62;
+        internal const int PayloadPerPacket = 62;
         private const int MaxPackets = 64;
         private const int ReplyTimeoutMs = 600;
         private const int FirstRequestAttempts = 4;
@@ -47,28 +50,7 @@ namespace SimsonnPedals
             if (devices.Count == 0)
                 return Finish(label, false, "Pedals not found on USB.", report, null);
 
-            var candidates = new List<HidDevice>();
-            foreach (var device in devices)
-            {
-                report.AppendLine($"Interface: {device.DevicePath}");
-                report.AppendLine($"  Max report lengths: in {device.GetMaxInputReportLength()}, out {device.GetMaxOutputReportLength()}, feature {device.GetMaxFeatureReportLength()}");
-                try
-                {
-                    var descriptor = device.GetReportDescriptor();
-                    report.AppendLine($"  Input reports:   {Describe(descriptor.InputReports)}");
-                    report.AppendLine($"  Output reports:  {Describe(descriptor.OutputReports)}");
-                    report.AppendLine($"  Feature reports: {Describe(descriptor.FeatureReports)}");
-                    if (descriptor.TryGetReport(ReportType.Output, ReportIdConfigIn, out _) &&
-                        descriptor.TryGetReport(ReportType.Input, ReportIdConfigIn, out _))
-                        candidates.Add(device);
-                }
-                catch (Exception ex)
-                {
-                    report.AppendLine($"  Could not read report descriptor: {ex.Message}");
-                }
-            }
-            report.AppendLine();
-
+            var candidates = FindInterfaces(devices, ReportIdConfigIn, report);
             if (candidates.Count == 0)
                 return Finish(label, false, "No interface offers FreeJoy-style settings reports (ID 3). See the report file.", report, null);
 
@@ -156,6 +138,33 @@ namespace SimsonnPedals
             }
         }
 
+        /// <summary>Interfaces that both accept and send reports with <paramref name="reportId"/>, described into <paramref name="report"/>.</summary>
+        internal static List<HidDevice> FindInterfaces(IEnumerable<HidDevice> devices, byte reportId, StringBuilder report)
+        {
+            var found = new List<HidDevice>();
+            foreach (var device in devices)
+            {
+                report.AppendLine($"Interface: {device.DevicePath}");
+                report.AppendLine($"  Max report lengths: in {device.GetMaxInputReportLength()}, out {device.GetMaxOutputReportLength()}, feature {device.GetMaxFeatureReportLength()}");
+                try
+                {
+                    var descriptor = device.GetReportDescriptor();
+                    report.AppendLine($"  Input reports:   {Describe(descriptor.InputReports)}");
+                    report.AppendLine($"  Output reports:  {Describe(descriptor.OutputReports)}");
+                    report.AppendLine($"  Feature reports: {Describe(descriptor.FeatureReports)}");
+                    if (descriptor.TryGetReport(ReportType.Output, reportId, out _) &&
+                        descriptor.TryGetReport(ReportType.Input, reportId, out _))
+                        found.Add(device);
+                }
+                catch (Exception ex)
+                {
+                    report.AppendLine($"  Could not read report descriptor: {ex.Message}");
+                }
+            }
+            report.AppendLine();
+            return found;
+        }
+
         /// <summary>The single write path in this class; it refuses anything but a CONFIG_IN request.</summary>
         private static void SendConfigInRequest(HidStream stream, byte[] request)
         {
@@ -213,7 +222,7 @@ namespace SimsonnPedals
             }
         }
 
-        private static void AppendHexDump(StringBuilder report, byte[] data)
+        internal static void AppendHexDump(StringBuilder report, byte[] data)
         {
             for (int row = 0; row < data.Length; row += 16)
             {
@@ -224,7 +233,7 @@ namespace SimsonnPedals
             }
         }
 
-        private static string FileLabel(string label)
+        internal static string FileLabel(string label)
         {
             if (string.IsNullOrWhiteSpace(label)) return "";
             var invalid = Path.GetInvalidFileNameChars();
@@ -240,7 +249,7 @@ namespace SimsonnPedals
 
         private static PedalConfigReadResult Finish(string label, bool success, string summary, StringBuilder report, byte[] data)
         {
-            var result = new PedalConfigReadResult { Success = success, Summary = summary };
+            var result = new PedalConfigReadResult { Success = success, Summary = summary, Data = data };
             try
             {
                 Directory.CreateDirectory(OutputFolder);

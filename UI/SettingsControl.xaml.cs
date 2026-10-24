@@ -164,6 +164,40 @@ namespace SimsonnPedals.UI
             }
         }
 
+        private async void OnRewriteTestClick(object sender, RoutedEventArgs e)
+        {
+            if (plugin.IsGameRunning)
+            {
+                MessageBox.Show("Exit the game first: the pedals restart during the test.", "SIMSONN Pedals");
+                return;
+            }
+            if (MessageBox.Show(
+                    "This reads the settings stored in the pedals and writes exactly the same bytes back, then reads them again to check.\n\n" +
+                    "The pedals save and restart, so they drop off USB for a few seconds. Close Simsonn Manager first.\n\n" +
+                    "Both reads are saved in the dump folder, so the settings can be restored from them. Continue?",
+                    "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                return;
+
+            ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = false;
+            PedalSettingsStatus.Text = "Rewrite test: reading, writing and reading back…";
+            try
+            {
+                int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
+                var result = await Task.Run(() => PedalConfigWriter.RewriteTest(vid, pid));
+                PedalSettingsStatus.Text = result.ReportPath == null
+                    ? result.Summary
+                    : $"{result.Summary} Report: {Path.GetFileName(result.ReportPath)}.";
+            }
+            catch (Exception ex)
+            {
+                PedalSettingsStatus.Text = "Failed: " + ex.Message;
+            }
+            finally
+            {
+                ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = true;
+            }
+        }
+
         private void OnOpenDumpFolderClick(object sender, RoutedEventArgs e)
         {
             Directory.CreateDirectory(PedalConfigReader.OutputFolder);

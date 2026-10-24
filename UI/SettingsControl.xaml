@@ -49,16 +49,22 @@
                 </StackPanel>
             </styles:SHSection>
 
-            <styles:SHSection Title="PEDAL FIRMWARE SETTINGS (READ-ONLY)" ShowSeparator="True">
+            <styles:SHSection Title="PEDAL FIRMWARE SETTINGS" ShowSeparator="True">
                 <StackPanel>
                     <TextBlock Opacity="0.7" TextWrapping="Wrap"
-                               Text="Downloads the settings stored in the pedals to a file, without changing anything. The pedals stop responding for about 2 seconds while it runs, so don't use it while driving." />
+                               Text="Read downloads the settings stored in the pedals to a file, without changing anything. The pedals stop responding for about 2 seconds while it runs, so don't use it while driving." />
                     <WrapPanel Margin="0,8,0,0">
                         <TextBlock Text="Label (optional)" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <TextBox x:Name="DumpLabel" Width="220" VerticalContentAlignment="Center" Margin="0,0,8,0"
                                  ToolTip="Describe the one change you made, e.g. brake deadzone start 10" />
                         <styles:SHButtonSecondary x:Name="ReadPedalSettingsButton" Click="OnReadPedalSettingsClick">Read pedal settings</styles:SHButtonSecondary>
                         <styles:SHButtonSecondary Click="OnOpenDumpFolderClick">Open folder</styles:SHButtonSecondary>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <styles:SHButtonSecondary x:Name="RewriteTestButton" Click="OnRewriteTestClick"
+                                                  ToolTip="Reads the settings, writes the same bytes back to the pedals and checks them. Changes nothing.">Rewrite test</styles:SHButtonSecondary>
+                        <TextBlock VerticalAlignment="Center" Opacity="0.7" TextWrapping="Wrap" Margin="4,0,0,0"
+                                   Text="Tests writing to the pedals by saving their own settings back unchanged. Close Simsonn Manager first." />
                     </WrapPanel>
                     <TextBlock x:Name="PedalSettingsStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
                 </StackPanel>
