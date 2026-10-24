@@ -70,7 +70,7 @@ namespace SimsonnPedals
         public static int AxisOffset(int axis) => AxisBase + AxisSize * axis;
         private const int OutLow = 0, OutCentre = 2, OutHigh = 4, RawMin = 6, RawMax = 8;
         private const int Flags = 10, Curve = 11, CurvePoints = 11, DeadzoneStart = 34, DeadzoneEndGap = 35;
-        private const int FilterMask = 0xE0, FilterShift = 5;
+        private const int FilterMask = 0xE0, FilterShift = 5, InvertBit = 0x02;
         private const int SourceMain = 24; // ADC pin feeding the axis (11 on this rig), 0xFF = off
         private const byte SourceNone = 0xFF;
 
@@ -191,6 +191,28 @@ namespace SimsonnPedals
             WriteInt16(result, o + OutLow, outLow);
             WriteInt16(result, o + OutHigh, outHigh);
             WriteInt16(result, o + OutCentre, (outLow + outHigh) / 2);
+            return result;
+        }
+
+        /// <summary>
+        /// Copy of <paramref name="block"/> with <paramref name="axis"/>'s shaping replaced: output ends (centre in the
+        /// middle), invert bit, the 11 curve points (−100…100), filter off, and the Manager's dead zone percentages (+34/+35,
+        /// display only) worked out from the ends. Calibration (+6/+8) and everything else stay as they are.
+        /// </summary>
+        public static byte[] WithAxisShaping(byte[] block, int axis, int outLow, int outHigh, bool inverted, sbyte[] curve)
+        {
+            if (curve == null || curve.Length != CurvePoints) throw new ArgumentException("A curve has 11 points.", nameof(curve));
+            var result = WithOutputEnds(block, axis, outLow, outHigh);
+            int o = AxisBase + AxisSize * axis;
+            result[o + Flags] = (byte)((block[o + Flags] & ~FilterMask & ~InvertBit) | (inverted ? InvertBit : 0));
+            for (int i = 0; i < CurvePoints; i++) result[o + Curve + i] = unchecked((byte)curve[i]);
+            int rawMin = BitConverter.ToInt16(block, o + RawMin), rawMax = BitConverter.ToInt16(block, o + RawMax);
+            double span = rawMax - rawMin;
+            if (span > 0)
+            {
+                result[o + DeadzoneStart] = (byte)Math.Max(0, Math.Min(100, Math.Round((outLow - rawMin) / span * 100)));
+                result[o + DeadzoneEndGap] = (byte)Math.Max(0, Math.Min(100, Math.Round((rawMax - outHigh) / span * 100)));
+            }
             return result;
         }
 

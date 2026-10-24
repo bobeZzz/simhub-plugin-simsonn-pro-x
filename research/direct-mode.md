@@ -77,6 +77,30 @@ From the settings dumps and write logs (the `direct-test-*.txt` reports weren't 
   those are the crossing instants (the two axes aren't sampled at the same moment). Fixed in the next release.
   Set back to off (threshold 10 %).
 
+## D2: preset → settings block (`PedalExport`)
+The plugin's chain before the curve (calibration, invert, brake force scaling, dead zone) is one clamped straight line
+in the raw sensor value, so it becomes the firmware's output ends: the raw values where the output leaves 0 and
+reaches 100 %. The 11 curve points go across as 2p − 100, rounded to whole numbers. Invert: the firmware inverts
+*after* the curve and the plugin *before* it, so an inverted axis gets the mirrored curve (100 − 2·p[10−i]) plus the
+invert bit, which gives the same output. Filter off; the Manager's dead zone percentages (+34/+35) are filled in for
+display. Calibration (+6/+8) and every other byte stay as they are.
+
+Reference frame: the pedals set up neutral, i.e. each axis outputs 0…100 % over its raw range (+6…+8), as in vJoy
+mode. Exporting from any block gives the same result, so exports never stack, and the default preset on neutral
+pedals exports to the same bytes (no write needed).
+
+Offline checks ([export-test.ps1](export-test.ps1), 40 random presets per dump: dead zones, curves, plugin calibration, invert, brake
+"100% at"), on the 2.1.1 D1 dump and the 2.0.8 18:33 dump, both set up neutral:
+- Firmware simulation of the exported block vs the plugin in vJoy mode: largest difference 0.087 % (throttle on 2.1.1,
+  whose raw span is only 3240 units, so the ends round to 0.03 % of travel), brake 0.034 %, clutch 0.008 %.
+- Bytes changed outside the shaping fields: none. Exporting an exported block again: identical.
+- Export then **Import** (plain presets): throttle within 0.05 %, brake within 0.35 % (import rounds "100% at" to
+  0.1 kg).
+
+For D3: in direct mode the pedals already output the shaped value, so the plugin must not shape it again. Its bars
+should show the pedals' output, and the calibration capture must work on the neutral frame (or set the pedals neutral
+while calibrating).
+
 **D1 result:** writes and `damping_max` apply live and the pedals stay connected, so direct mode doesn't need to
 avoid writing while driving. Open for D3: how long a *write alone* (no reads around it) pauses the joystick reports.
 Direct mode should write from the block it already holds, without re-reading each time, and the D3 test should time

@@ -91,10 +91,11 @@ and reload the settings live (see [research/direct-mode.md](research/direct-mode
      saved; the firmware brake cut works (cut at about 21 % for 20 %). Every test put the settings back exactly.
    - Open for D3: time the joystick pause of a write on its own. Reads pause the pedals' reports for about 2 s, so
      direct mode writes from the block it holds instead of re-reading before every write.
-2. **D2 – Preset → settings block (`PedalExport`).** The inverse of `ManagerImport`: start from the block read from
-   the pedals, change only the shaping fields of throttle, brake (and clutch), keep calibration, sensors, buttons and
-   everything else byte for byte. Offline checks: export → import gives the same preset, and the simulated firmware
-   output matches the plugin's within rounding, on the rig dumps.
+2. **D2 – Preset → settings block (`PedalExport`). Done (code only, no release).** Folds calibration, invert, brake
+   force and dead zone into the output ends, curve as whole-number points, invert as the mirrored curve plus the
+   firmware's invert bit; only shaping bytes change. Offline on the 2.1.1 and 2.0.8 dumps: firmware output within
+   0.09 % of vJoy mode, no other bytes touched, no stacking, the default preset needs no write, export → import within
+   0.35 %. See [research/direct-mode.md](research/direct-mode.md).
 3. **D3 – Output mode and writing.** Setting **Output: vJoy / Direct to pedals**. Direct mode doesn't acquire vJoy
    or start the exit guard; the engine still reads the pedals for the bars. A write reads the block first and skips it
    when nothing changes (no needless restart or flash write). Writes happen on **Write to pedals**, on Save, and on an
