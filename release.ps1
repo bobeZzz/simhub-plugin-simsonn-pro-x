@@ -26,7 +26,7 @@ $project = Join-Path $root 'SimsonnPedals.csproj'
 $dll = Join-Path $root 'bin\Release\net48\SimsonnPedals.dll'
 $tag = "v$Version"
 
-function Git { & git -C $root @args; if ($LASTEXITCODE -ne 0) { throw "git $args failed" } }
+function Git { & git.exe -C $root @args; if ($LASTEXITCODE -ne 0) { throw "git $args failed" } }
 
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 1.2.3" }
 if ((Git rev-parse --abbrev-ref HEAD) -ne 'main') { throw "Switch to the main branch first." }
@@ -34,7 +34,8 @@ if (Git status --porcelain) { throw "Commit or stash your changes first; a relea
 Git fetch --quiet origin
 if ((Git rev-parse HEAD) -ne (Git rev-parse origin/main)) { throw "main differs from origin/main; push or pull first." }
 if (Git tag --list $tag) { throw "Tag $tag already exists." }
-$previous = (& git -C $root describe --tags --abbrev=0 2>$null)
+# PS 5.1 turns a native stderr line into a terminating error under Stop, hence the try.
+$previous = try { & git.exe -C $root describe --tags --abbrev=0 2>$null } catch { $null }
 
 # Version, build
 $xml = Get-Content $project -Raw
@@ -48,7 +49,7 @@ if ("$($built.Major).$($built.Minor).$($built.Build)" -ne $Version) { throw "Bui
 # Release notes: the given text, else the commit subjects since the last release.
 if (-not $Notes) {
     $range = if ($previous) { "$previous..HEAD" } else { 'HEAD' }
-    $Notes = ((& git -C $root log $range --no-merges --format='- %s') -join "`n")
+    $Notes = ((& git.exe -C $root log $range --no-merges --format='- %s') -join "`n")
 }
 
 if (Git status --porcelain) {
@@ -59,7 +60,7 @@ Git tag -a $tag -m "Release $tag"
 Git push --quiet origin main $tag
 
 # GitHub token from Git's credential store
-$cred = "protocol=https`nhost=github.com`n`n" | & git credential fill
+$cred = "protocol=https`nhost=github.com`n`n" | & git.exe credential fill
 $token = ($cred | Where-Object { $_ -like 'password=*' }) -replace '^password=', ''
 if (-not $token) { throw "No stored GitHub sign-in. Run 'git push' once to sign in, then run: .\release.ps1 -Version $Version (after deleting tag $tag)" }
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
