@@ -1,5 +1,9 @@
 # SIMSONN Pro X Ultra settings block (FreeJoy-derived)
 
+> **Corrections from the Manager's binaries (2026-10-24), see [manager-protocol.md](manager-protocol.md):** axes 3–5 are
+> each pedal's second sensor, not unused; brake +43 is lighting, not throttle cut; throttle cut and elastomer are report 6
+> commands outside this block; units per kg depend on the firmware (300 up to 2.0.9, 148 from 2.1.0).
+
 Source: `pedal-settings-20261024-174747.bin` (read from the rig, 1116 bytes = 18 × 62-byte packets).
 Firmware CPU1 v2.0.8 (`0x2080`), CPU2 v2.0.5. USB interface `MI_01` carries the settings reports
 (IDs 2–6, 64 bytes each); `MI_00` is the joystick (ID 1, 7 bytes).

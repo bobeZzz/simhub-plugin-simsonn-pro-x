@@ -1,7 +1,7 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.5).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.6).
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -9,6 +9,8 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 - SimHub: dev PC `D:\stasiks`, rig `C:\Program Files (x86)\SimHub`
 - Rig test data from Simsonn Manager: `D:\stasiks-rest\claude\rig-data-from-simsonn-manager` (copied into `research/`)
 - Settings block map and all test rounds: [research/pedal-settings-layout.md](research/pedal-settings-layout.md)
+- How Simsonn Manager talks to the pedals (from its binaries: report 6 commands, params report, calibration):
+  [research/manager-protocol.md](research/manager-protocol.md). Manager install copy: `D:\stasiks-rest\claude\simsonn-manager`
 
 ## How we work
 - The user tests on the rig. They update from the plugin page (**Plugin updates**), so every rig test needs a release.
@@ -26,8 +28,10 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 - Edits apply immediately and are autosaved, but stay "unsaved" until **Save**; **Revert** returns to the last Save.
 - Brake: "Pedal max" = max force stored in the pedals; "100% at" = the user's real 100%.
 - GIF at the top right of the page. Ignore interface language, the dashboard and housekeeping features.
-- Elastomer and the firmware throttle-cut threshold are not stored in the pedals: not supported. Throttle cut is done
-  by the plugin (phase 7).
+- Throttle cut is done by the plugin (phase 7). The firmware has its own (report 6 `brakeCutoff`, outside the
+  settings block); the plugin only switches it off, so the pedals never cut throttle behind the plugin's back.
+- Elastomer (report 6 `damping_type`) is not supported: in the Manager it only caps the max force (60 / 100 / 140 kg)
+  and its effect in the firmware is unknown.
 
 ## Done
 | Phase | What | Version |
@@ -40,21 +44,42 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | F4 | Write to pedals (FreeJoy CONFIG_OUT), rewrite test verified on the rig | 1.0.3 |
 | F4 | **Set up pedals** (linear, 0–100, filter off, brake max force; keeps calibration), verified on the rig | 1.0.4 |
 | 2 | Save / Revert with unsaved marker; Save as moves edits to the new preset | 1.0.5 (rig check pending) |
+| – | Max force units/kg from the firmware version (300 for 2.0.x, 148 for 2.1.x, refuse others) | 1.0.6 (rig check pending) |
+| F5 | **Read pedal settings** also reads throttle cut, elastomer, raw sensors (report 6) and 3 s of params reports | 1.0.6 (rig check pending) |
+| F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-1. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
+1. **Rig-check 1.0.6 (released).**
+   - *Max force scale from the firmware version:* `PedalSettingsLayout.UnitsPerKg(block)` = 300 for 2.0.x, 148 for
+     2.1.x, unknown otherwise. **Set up pedals** refuses an unknown firmware and the status shows "max force unknown".
+     On the rig (2.0.8) nothing should change.
+   - *F5 read-only check:* **Read pedal settings** now also asks `readBrakeCutoff`, `read_damping_type` and `read_raw`
+     over report 6, and captures 3 s of params reports (`[2]` every second). The report file gets a "Live status" section
+     with the raw replies, and the page shows a summary. `PedalStatusReader` only sends those requests.
+     Rig test: one read with the pedals at rest, one while slowly pressing both through the 3 s capture, and one after
+     changing the throttle cut in Simsonn Manager. Check against manager-protocol.md: reply formats, raw channel offsets
+     (channel i at packet 0 byte 6 + 2i), and that the joystick keeps working.
+3. **Set up pedals switches the firmware throttle cut off** (`brakeCutoff` with enabled 0) and shows its state. Report 6
+   writes are live; check on the rig that they don't restart the pedals.
+4. **Phase 3 – per-car presets.** Lookup car → car class → game → Default; "Save for this car / class"; show which
    level is active. Needs SimHub's car id and class from GameData.
-2. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
+5. **Phase 8 – calibrate from the plugin** (was parked; now mapped, see manager-protocol.md). Live min/max per pedal from
+   the params report, rest → press → Finish; then one block write: raw_min (+6) = rest, throttle raw_max (+8) = full
+   press, brake raw_max from max force, output ends = raw range (no dead zone), the rest as **Set up pedals**. Needs F5.
+   After this, Simsonn Manager is only needed for firmware updates.
+6. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
    the brake pressed in the sim). Zeroing in End/ProcessExit isn't enough; an earlier exit-watchdog attempt was abandoned.
-3. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.
-4. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
-5. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
-6. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
+7. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.
+8. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
+9. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
+10. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
 
 ## Maybe / parked
-- **Calibrate from the plugin.** Calibration is the last thing that needs Simsonn Manager. Needs raw sensor values,
-  probably in FreeJoy's params report (ID 2); another research round like F2.
-- **F3 – import Simsonn Manager presets.** Only worth it if the user has Manager presets to keep.
+- **Live brake max force** (report 6 `damping_max`, sent by the Manager while the spinner moves). If it applies without
+  a restart, max force could change per car in the pedals. Not needed while scaling is done in the plugin; unknown
+  whether it writes flash every time.
+- **F3 – import Simsonn Manager presets.** Only worth it if the user has Manager presets to keep. Format is known now:
+  INI with FreeJoy key names (`env\Default_*`, user presets in `<Manager>\etc\device\<name>\pedal.cfg`).
 
 ## Known facts worth remembering
 - USB VID_DDFD PID_6012. Interface MI_00 = joystick (report 1); MI_01 = settings (reports 2–6, 64 bytes).
@@ -63,5 +88,10 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 - Read: `[3, n]` → `[3, n, 62 bytes]`. Write: `[4, 0]` → `[4, 1]`, then `[4, n, 62 bytes]` → `[4, n+1]`; after the last
   packet the pedals save and restart (no answer). `[4, 0xFE]` = version mismatch, nothing saved.
 - Right after Simsonn Manager saves, the pedals may not answer the first read; the reader retries 4 times.
+- Report 6 = command channel: `[6, "name", payload]`, replies `[6, "OK"…]` / `[6, "BCOK"…]`. Report 2 = params: host
+  sends `[2, 0]` (repeat < 5 s), device sends raw sensor values (channel i int16 at packet 0 byte 6 + 2i; to verify).
+- Axis fields are FreeJoy's: +0/+2/+4 CalibMin/Center/Max (our output ends), +6/+8 old_calib_min/max (our raw range).
+  Axes 3–5 are each pedal's second sensor (disabled on this rig). Brake +43 is lighting, not throttle cut.
+- Max force: raw_max = raw_min + kg × units/kg ÷ (1 − start dead zone); units/kg = 300 (fw ≤ 2.0.9) or 148 (fw ≥ 2.1.0).
 - SimHub is 32-bit; the plugin is net48 AnyCPU. SimHub asks for approval whenever the plugin DLL changes.
 - Windows PowerShell 5.1 adds a BOM to piped stdin: `release.ps1` feeds `git credential fill` from an ASCII file.

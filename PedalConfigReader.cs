@@ -17,6 +17,9 @@ namespace SimsonnPedals
 
         /// <summary>The settings block as read, or null if the read failed.</summary>
         public byte[] Data { get; set; }
+
+        /// <summary>Short summary of the live status query (<see cref="PedalStatusReader"/>), or null if not asked or nothing read.</summary>
+        public string LiveSummary { get; set; }
     }
 
     /// <summary>
@@ -38,7 +41,8 @@ namespace SimsonnPedals
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PluginsData", "SimsonnPedals");
 
         /// <param name="label">Optional note (e.g. "brake deadzone 10") added to the file names and report.</param>
-        public static PedalConfigReadResult Read(int vendorId, int productId, string label = null)
+        /// <param name="includeLiveStatus">Also query what the pedals keep outside the block (<see cref="PedalStatusReader"/>); takes ~6 s more.</param>
+        public static PedalConfigReadResult Read(int vendorId, int productId, string label = null, bool includeLiveStatus = false)
         {
             var report = new StringBuilder();
             report.AppendLine($"SIMSONN pedal settings dump, {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
@@ -74,9 +78,24 @@ namespace SimsonnPedals
                 report.AppendLine();
                 AppendAnalysis(report, data);
                 report.AppendLine();
+                string live = null;
+                if (includeLiveStatus)
+                {
+                    try
+                    {
+                        live = PedalStatusReader.Query(device, report);
+                    }
+                    catch (Exception ex)
+                    {
+                        report.AppendLine($"  Live status failed: {ex.GetType().Name}: {ex.Message}");
+                        report.AppendLine();
+                    }
+                }
                 report.AppendLine("Hex dump:");
                 AppendHexDump(report, data);
-                return Finish(label, true, $"Read {data.Length} bytes in {packets} packets.", report, data);
+                var result = Finish(label, true, $"Read {data.Length} bytes in {packets} packets.", report, data);
+                result.LiveSummary = live;
+                return result;
             }
 
             return Finish(label, false, "The pedals did not answer the settings request. See the report file.", report, null);

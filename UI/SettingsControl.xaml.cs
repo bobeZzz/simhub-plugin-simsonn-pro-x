@@ -162,7 +162,7 @@ namespace SimsonnPedals.UI
         private async void OnReadPedalSettingsClick(object sender, RoutedEventArgs e)
         {
             if (plugin.IsGameRunning &&
-                MessageBox.Show("A game is running. The pedals will stop responding for about 2 seconds. Continue?",
+                MessageBox.Show("A game is running. The pedals may stop responding for a few seconds. Continue?",
                     "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
                 return;
 
@@ -172,13 +172,18 @@ namespace SimsonnPedals.UI
             {
                 int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
                 string label = DumpLabel.Text;
-                var result = await Task.Run(() => PedalConfigReader.Read(vid, pid, label));
+                var result = await Task.Run(() => PedalConfigReader.Read(vid, pid, label, includeLiveStatus: true));
                 // Clear it so the next read is not saved under the previous change's name.
                 if (result.Success) DumpLabel.Clear();
                 PedalSettingsStatus.Text = result.ReportPath == null
                     ? result.Summary
                     : $"{result.Summary} Saved to {Path.GetFileName(result.ReportPath)}{(result.BinaryPath != null ? " and .bin" : "")}.";
-                if (result.Success) PedalSettingsStatus.Text += Environment.NewLine + PedalSettingsLayout.Describe(result.Data);
+                if (result.Success)
+                {
+                    PedalSettingsStatus.Text += Environment.NewLine + $"Firmware {PedalSettingsLayout.FirmwareVersionText(result.Data)}" +
+                                                Environment.NewLine + PedalSettingsLayout.Describe(result.Data);
+                    PedalSettingsStatus.Text += Environment.NewLine + (result.LiveSummary ?? "Live status: no answer (see the report file).");
+                }
             }
             catch (Exception ex)
             {
@@ -221,7 +226,7 @@ namespace SimsonnPedals.UI
                 {
                     wanted = PedalSettingsLayout.BaseSetup(current.Data, kg);
                 }
-                catch (ArgumentOutOfRangeException ex)
+                catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is NotSupportedException)
                 {
                     // The message's second line is the parameter name.
                     PedalSettingsStatus.Text = "Nothing was written: " + ex.Message.Split(new[] { Environment.NewLine }, StringSplitOptions.None)[0];
