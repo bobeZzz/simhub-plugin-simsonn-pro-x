@@ -141,6 +141,9 @@ namespace SimsonnPedals
 
         public PedalPreset Clone() => new PedalPreset { Throttle = Throttle.Clone(), Brake = Brake.Clone() };
 
+        public bool SameAs(PedalPreset other) =>
+            other != null && JsonConvert.SerializeObject(this) == JsonConvert.SerializeObject(other);
+
         public void EnsureValid()
         {
             var defaults = CreateDefault();
@@ -164,7 +167,12 @@ namespace SimsonnPedals
 
         public string ActivePresetName { get; set; } = DefaultPresetName;
 
+        /// <summary>Presets as edited; this is what drives the pedals. Autosaved, so edits survive a restart.</summary>
         public Dictionary<string, PedalPreset> Presets { get; set; } =
+            new Dictionary<string, PedalPreset>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Each preset as of its last Save; Revert goes back to these.</summary>
+        public Dictionary<string, PedalPreset> SavedPresets { get; set; } =
             new Dictionary<string, PedalPreset>(StringComparer.OrdinalIgnoreCase);
 
         public void EnsureValid()
@@ -175,6 +183,14 @@ namespace SimsonnPedals
                 .ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
             foreach (var preset in Presets.Values) preset.EnsureValid();
             if (!Presets.ContainsKey(DefaultPresetName)) Presets[DefaultPresetName] = PedalPreset.CreateDefault();
+
+            // Settings from before Save/Revert have no saved copies: treat what's there as saved.
+            SavedPresets = (SavedPresets ?? new Dictionary<string, PedalPreset>())
+                .Where(p => p.Value != null && Presets.ContainsKey(p.Key))
+                .ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+            foreach (var preset in SavedPresets.Values) preset.EnsureValid();
+            foreach (var name in Presets.Keys.Where(n => !SavedPresets.ContainsKey(n)).ToList())
+                SavedPresets[name] = Presets[name].Clone();
             if (string.IsNullOrEmpty(ActivePresetName) || !Presets.ContainsKey(ActivePresetName)) ActivePresetName = DefaultPresetName;
             if (VJoyDeviceId < 1 || VJoyDeviceId > 16) VJoyDeviceId = 1;
         }

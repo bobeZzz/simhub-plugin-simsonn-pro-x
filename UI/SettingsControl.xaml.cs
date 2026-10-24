@@ -86,6 +86,7 @@ namespace SimsonnPedals.UI
             SaveForGameButton.IsEnabled = !string.IsNullOrEmpty(game);
             SaveForGameButton.Content = string.IsNullOrEmpty(game) ? "Save for current game" : $"Save for {game}";
 
+            RefreshModified();
             BrakePanel.Refresh(engine.DeviceConnected);
             ThrottlePanel.Refresh(engine.DeviceConnected);
         }
@@ -98,7 +99,29 @@ namespace SimsonnPedals.UI
 
         private void OnReconnectClick(object sender, RoutedEventArgs e) => plugin.Engine.RequestReconnect();
 
-        private void OnSaveClick(object sender, RoutedEventArgs e) => plugin.Save();
+        private void RefreshModified()
+        {
+            string active = plugin.Settings.ActivePresetName;
+            bool modified = plugin.IsModified(active);
+            SaveButton.IsEnabled = RevertButton.IsEnabled = modified;
+
+            var others = plugin.Settings.Presets.Keys
+                .Where(n => !string.Equals(n, active, StringComparison.OrdinalIgnoreCase) && plugin.IsModified(n))
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+            string text = modified ? "Unsaved changes. They're already in use; Save keeps them, Revert goes back to the last Save." : "";
+            if (others.Count > 0)
+                text += (text.Length > 0 ? " " : "") + "Also unsaved: " + string.Join(", ", others) + ".";
+            if (ModifiedText.Text != text) ModifiedText.Text = text;
+        }
+
+        private void OnSaveClick(object sender, RoutedEventArgs e) => plugin.SaveActivePreset();
+
+        private void OnRevertClick(object sender, RoutedEventArgs e)
+        {
+            if (MessageBox.Show($"Discard the changes to \"{plugin.Settings.ActivePresetName}\" since its last Save?",
+                    "SIMSONN Pedals", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                plugin.RevertActivePreset();
+        }
 
         private void OnSaveAsClick(object sender, RoutedEventArgs e)
         {

@@ -31,8 +31,12 @@
                         <TextBlock Text="Active preset" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <ComboBox x:Name="PresetCombo" Width="200" SelectionChanged="OnPresetSelected" Margin="0,0,8,0" />
                         <styles:SHButtonSecondary x:Name="DeleteButton" Click="OnDeleteClick">Delete</styles:SHButtonSecondary>
-                        <styles:SHButtonPrimary Click="OnSaveClick">Save</styles:SHButtonPrimary>
+                        <styles:SHButtonPrimary x:Name="SaveButton" Click="OnSaveClick"
+                                                ToolTip="Keep the current values; Revert comes back to them">Save</styles:SHButtonPrimary>
+                        <styles:SHButtonSecondary x:Name="RevertButton" Click="OnRevertClick"
+                                                  ToolTip="Go back to this preset's last Save">Revert</styles:SHButtonSecondary>
                     </WrapPanel>
+                    <TextBlock x:Name="ModifiedText" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#FFE0A030" />
                     <WrapPanel Margin="0,8,0,0">
                         <TextBlock Text="Save as" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <TextBox x:Name="NewPresetName" Width="200" VerticalContentAlignment="Center" Margin="0,0,8,0" />

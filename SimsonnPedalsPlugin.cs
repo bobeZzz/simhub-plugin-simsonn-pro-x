@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading;
@@ -19,6 +20,7 @@ namespace SimsonnPedals
 
         // Presets are edited on the UI thread and looked up on SimHub's data thread.
         private readonly object presetLock = new object();
+        private readonly Dictionary<string, bool> modifiedCache = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private string lastGameName;
         private Timer autosaveTimer;
 
@@ -129,7 +131,66 @@ namespace SimsonnPedals
             preset.Brake.PropertyChanged += OnPresetEdited;
         }
 
-        private void OnPresetEdited(object sender, PropertyChangedEventArgs e) => RequestSave();
+        private void Untrack(PedalPreset preset)
+        {
+            preset.Throttle.PropertyChanged -= OnPresetEdited;
+            preset.Brake.PropertyChanged -= OnPresetEdited;
+        }
+
+        private void OnPresetEdited(object sender, PropertyChangedEventArgs e)
+        {
+            lock (presetLock) modifiedCache.Clear();
+            RequestSave();
+        }
+
+        /// <summary>True if <paramref name="name"/> has edits since its last Save. Cached until the next edit.</summary>
+        public bool IsModified(string name)
+        {
+            lock (presetLock)
+            {
+                if (name == null || !Settings.Presets.TryGetValue(name, out var preset)) return false;
+                if (!modifiedCache.TryGetValue(name, out bool modified))
+                {
+                    Settings.SavedPresets.TryGetValue(name, out var saved);
+                    modifiedCache[name] = modified = !preset.SameAs(saved);
+                }
+                return modified;
+            }
+        }
+
+        /// <summary>Makes the active preset's current values the ones Revert goes back to.</summary>
+        public void SaveActivePreset()
+        {
+            lock (presetLock)
+            {
+                Settings.SavedPresets[Settings.ActivePresetName] = ActivePreset.Clone();
+                modifiedCache.Clear();
+            }
+            Save();
+        }
+
+        /// <summary>Puts the active preset back to its last Save.</summary>
+        public void RevertActivePreset()
+        {
+            string name = Settings.ActivePresetName;
+            lock (presetLock)
+            {
+                if (!Settings.SavedPresets.TryGetValue(name, out var saved)) return;
+                Restore(name, saved);
+            }
+            ActivatePreset(name);
+            Save();
+        }
+
+        // Caller holds presetLock. Swaps in a fresh copy, so the engine and the page pick it up through ActivatePreset.
+        private void Restore(string name, PedalPreset saved)
+        {
+            if (Settings.Presets.TryGetValue(name, out var old)) Untrack(old);
+            var copy = saved.Clone();
+            Track(copy);
+            Settings.Presets[name] = copy;
+            modifiedCache.Clear();
+        }
 
         public void ApplyPresetForGame(string game)
         {
@@ -150,12 +211,29 @@ namespace SimsonnPedals
             ActivePresetChanged?.Invoke();
         }
 
-        /// <summary>Copies the active preset under <paramref name="name"/> and switches to it.</summary>
+        /// <summary>
+        /// Saves the active preset's current values under <paramref name="name"/> and switches to it. Like "Save as"
+        /// in an editor, the original preset goes back to its last Save: its edits now live in the new one.
+        /// </summary>
         public void SaveActiveAs(string name)
         {
+            string source = Settings.ActivePresetName;
+            if (string.Equals(source, name, StringComparison.OrdinalIgnoreCase))
+            {
+                SaveActivePreset();
+                return;
+            }
+
             var copy = ActivePreset.Clone();
             Track(copy);
-            lock (presetLock) Settings.Presets[name] = copy;
+            lock (presetLock)
+            {
+                if (Settings.Presets.TryGetValue(name, out var replaced)) Untrack(replaced);
+                Settings.Presets[name] = copy;
+                Settings.SavedPresets[name] = copy.Clone();
+                if (Settings.SavedPresets.TryGetValue(source, out var sourceSaved)) Restore(source, sourceSaved);
+                modifiedCache.Clear();
+            }
             ActivatePreset(name);
             Save();
         }
@@ -163,7 +241,9 @@ namespace SimsonnPedals
         /// <summary>Records the max force now stored in the pedals in every preset (call on the UI thread).</summary>
         public void SetPedalMaxForce(double kg)
         {
-            foreach (var preset in Settings.Presets.Values) preset.Brake.FirmwareMaxForceKg = kg;
+            // A fact about the pedals, not an edit: update the saved copies too, so presets don't show as unsaved.
+            foreach (var preset in Settings.Presets.Values.Concat(Settings.SavedPresets.Values)) preset.Brake.FirmwareMaxForceKg = kg;
+            lock (presetLock) modifiedCache.Clear();
         }
 
         public bool DeletePreset(string name)
@@ -171,7 +251,11 @@ namespace SimsonnPedals
             if (string.Equals(name, PluginSettings.DefaultPresetName, StringComparison.OrdinalIgnoreCase)) return false;
             lock (presetLock)
             {
-                if (!Settings.Presets.Remove(name)) return false;
+                if (!Settings.Presets.TryGetValue(name, out var preset)) return false;
+                Untrack(preset);
+                Settings.Presets.Remove(name);
+                Settings.SavedPresets.Remove(name);
+                modifiedCache.Clear();
                 if (string.Equals(Settings.ActivePresetName, name, StringComparison.OrdinalIgnoreCase)) Settings.ActivePresetName = null;
             }
             if (Settings.ActivePresetName == null) ActivatePreset(PluginSettings.DefaultPresetName);

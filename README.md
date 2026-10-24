@@ -12,6 +12,7 @@ The plugin reads the pedals, applies calibration → dead zone → curve, and wr
 ## Behaviour
 - Throttle reads axis X and brake reads axis Y of the pedal base. Change this under **Axis mapping** if needed.
 - There is no smoothing filter: the output follows the pedal with no added delay.
+- Edits take effect immediately and survive a SimHub restart, but stay marked as unsaved until you click **Save**. **Revert** puts the preset back to its last Save. **Save as** moves the edits into the new preset and puts the original back to its last Save.
 - Each game can have its own preset, named after the game in SimHub (e.g. `IRacing`). When **auto switch** is on, the plugin applies it when the game changes and falls back to `Default` otherwise.
 - SimHub properties: `SimsonnPedalsPlugin.Throttle.Output`, `.Brake.Output`, `.Throttle.Raw`, `.DeviceConnected`, `.VJoyStatus`, `.ActivePreset`.
 - `NextPreset` action can be mapped to a wheel button.
