@@ -232,29 +232,54 @@ namespace SimsonnPedals.UI
                     PedalSettingsStatus.Text = "Nothing was written: " + ex.Message.Split(new[] { Environment.NewLine }, StringSplitOptions.None)[0];
                     return;
                 }
-                if (wanted.SequenceEqual(current.Data))
+                // The firmware's own throttle cut lives outside the settings block (report 6); setup switches it off.
+                var cutoff = await Task.Run(() => PedalStatusReader.ReadBrakeCutoff(vid, pid, new System.Text.StringBuilder()));
+                bool blockChanges = !wanted.SequenceEqual(current.Data);
+                bool cutOn = cutoff?.Enabled == true;
+                string cutoffNow = cutoff?.ToString() ?? "Firmware throttle cut: unknown (the pedals didn't answer)";
+
+                if (!blockChanges && !cutOn)
                 {
                     plugin.SetPedalMaxForce(kg);
-                    PedalSettingsStatus.Text = "The pedals are already set up this way." + Environment.NewLine + PedalSettingsLayout.Describe(current.Data);
+                    PedalSettingsStatus.Text = "The pedals are already set up this way." + Environment.NewLine +
+                                               PedalSettingsLayout.Describe(current.Data) + Environment.NewLine + cutoffNow;
                     return;
                 }
 
-                if (MessageBox.Show(
-                        "Now in the pedals:\n" + PedalSettingsLayout.Describe(current.Data) +
-                        "\n\nAfter setup:\n" + PedalSettingsLayout.Describe(wanted) +
-                        "\n\nCalibration is kept. The pedals save and restart, so they drop off USB for a few seconds. " +
-                        "Close Simsonn Manager first. The current settings were saved to the dump folder. Write?",
-                        "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                string question = "Now in the pedals:\n" + PedalSettingsLayout.Describe(current.Data) + "\n" + cutoffNow +
+                                  "\n\nAfter setup:\n" + PedalSettingsLayout.Describe(blockChanges ? wanted : current.Data) +
+                                  (cutOn ? "\nFirmware throttle cut: off (the plugin does throttle cut itself)" : "\n" + cutoffNow) + "\n\n";
+                question += blockChanges
+                    ? "Calibration is kept. The pedals save and restart, so they drop off USB for a few seconds. " +
+                      "Close Simsonn Manager first. The current settings were saved to the dump folder. Write?"
+                    : "Only the throttle cut changes; the pedals don't restart. Close Simsonn Manager first. Write?";
+                if (MessageBox.Show(question, "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
                 {
                     PedalSettingsStatus.Text = "Nothing was written.";
                     return;
                 }
 
-                PedalSettingsStatus.Text = "Writing the settings to the pedals…";
-                var result = await Task.Run(() => PedalConfigWriter.Write(vid, pid, current.Data, wanted, "setup"));
-                if (result.Success) plugin.SetPedalMaxForce(kg);
-                PedalSettingsStatus.Text = result.ReportPath == null ? result.Summary : $"{result.Summary} Report: {Path.GetFileName(result.ReportPath)}.";
-                if (result.Success) PedalSettingsStatus.Text += Environment.NewLine + PedalSettingsLayout.Describe(wanted);
+                var lines = new System.Collections.Generic.List<string>();
+                // Live change first, before the block write restarts the pedals; a later Read pedal settings shows whether it survived.
+                if (cutOn)
+                {
+                    PedalSettingsStatus.Text = "Switching the firmware throttle cut off…";
+                    var cut = await Task.Run(() => PedalCommandWriter.SwitchThrottleCutOff(vid, pid));
+                    lines.Add(cut.ReportPath == null ? cut.Summary : $"{cut.Summary} Report: {Path.GetFileName(cut.ReportPath)}.");
+                }
+
+                bool blockWritten = !blockChanges;
+                if (blockChanges)
+                {
+                    PedalSettingsStatus.Text = "Writing the settings to the pedals…";
+                    var result = await Task.Run(() => PedalConfigWriter.Write(vid, pid, current.Data, wanted, "setup"));
+                    blockWritten = result.Success;
+                    lines.Insert(0, result.ReportPath == null ? result.Summary : $"{result.Summary} Report: {Path.GetFileName(result.ReportPath)}.");
+                    if (result.Success) lines.Insert(1, PedalSettingsLayout.Describe(wanted));
+                }
+
+                if (blockWritten) plugin.SetPedalMaxForce(kg);
+                PedalSettingsStatus.Text = string.Join(Environment.NewLine, lines);
             }
             catch (Exception ex)
             {

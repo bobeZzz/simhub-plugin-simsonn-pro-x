@@ -84,26 +84,82 @@ namespace SimsonnPedals
             return summary.Count == 0 ? null : string.Join(Environment.NewLine, summary);
         }
 
+        /// <summary>The firmware's own throttle cut: throttle is zeroed while the brake is above the threshold.</summary>
+        public struct BrakeCutoff
+        {
+            public bool Enabled;
+            /// <summary>Brake level in 0.1 % steps (100 = 10 %).</summary>
+            public int ThresholdTenths;
+
+            public override string ToString() => Enabled
+                ? $"Firmware throttle cut: on, above {ThresholdTenths / 10.0:0.#} % brake"
+                : $"Firmware throttle cut: off (threshold {ThresholdTenths / 10.0:0.#} %)";
+        }
+
+        /// <summary>Opens the settings interface and asks for the firmware throttle cut; null if it can't be read.</summary>
+        public static BrakeCutoff? ReadBrakeCutoff(int vendorId, int productId, StringBuilder report)
+        {
+            var devices = DeviceList.Local.GetHidDevices(vendorId, productId).ToList();
+            var device = PedalConfigReader.FindInterfaces(devices, ReportIdCommand, report).FirstOrDefault();
+            if (device == null || !device.TryOpen(out HidStream stream))
+            {
+                report.AppendLine("  The settings interface wasn't found or couldn't be opened.");
+                return null;
+            }
+            using (stream)
+            {
+                stream.ReadTimeout = 100;
+                return ReadBrakeCutoff(stream, new byte[device.GetMaxOutputReportLength()], new byte[device.GetMaxInputReportLength()], report);
+            }
+        }
+
+        internal static BrakeCutoff? ReadBrakeCutoff(HidStream stream, byte[] request, byte[] reply, StringBuilder report)
+        {
+            report.AppendLine("  readBrakeCutoff:");
+            SendCommand(stream, request, "readBrakeCutoff");
+            int count = WaitForCommandReply(stream, reply, report);
+            var cutoff = ParseBrakeCutoff(reply, count);
+            report.AppendLine($"    {cutoff?.ToString() ?? "not in the expected format"}");
+            return cutoff;
+        }
+
+        private static BrakeCutoff? ParseBrakeCutoff(byte[] r, int count) =>
+            count >= 8 && Ascii(r, 1, 4) == "BCOK"
+                ? new BrakeCutoff { Enabled = r[5] == 1, ThresholdTenths = BitConverter.ToUInt16(r, 6) }
+                : (BrakeCutoff?)null;
+
         private static string QueryCommand(HidStream stream, byte[] request, byte[] reply, string command, StringBuilder report)
         {
             report.AppendLine($"  {command}:");
+            SendCommand(stream, request, command);
+            int count = WaitForCommandReply(stream, reply, report);
+            if (count == 0) return null;
+            string parsed = ParseReply(command, reply, count);
+            report.AppendLine($"    {parsed ?? "not in the expected format"}");
+            return parsed;
+        }
+
+        private static void SendCommand(HidStream stream, byte[] request, string command)
+        {
             Array.Clear(request, 0, request.Length);
             request[0] = ReportIdCommand;
             Encoding.ASCII.GetBytes(command, 0, command.Length, request, 1);
             Send(stream, request);
+        }
 
+        /// <summary>Waits for the next report 6 and logs it; returns its length, or 0 if none came.</summary>
+        internal static int WaitForCommandReply(HidStream stream, byte[] reply, StringBuilder report)
+        {
             var deadline = DateTime.UtcNow.AddMilliseconds(CommandReplyTimeoutMs);
             while (DateTime.UtcNow < deadline)
             {
                 int count = TryRead(stream, reply);
                 if (count < 2 || reply[0] != ReportIdCommand) continue;
                 report.AppendLine($"    reply: {Hex(reply, Math.Min(count, 16))}  \"{Ascii(reply, 1, Math.Min(count, 16) - 1)}\"");
-                string parsed = ParseReply(command, reply, count);
-                report.AppendLine($"    {parsed ?? "not in the expected format"}");
-                return parsed;
+                return count;
             }
             report.AppendLine("    no reply");
-            return null;
+            return 0;
         }
 
         private static string ParseReply(string command, byte[] r, int count)
@@ -111,11 +167,8 @@ namespace SimsonnPedals
             bool Starts(string text) => count > text.Length && Ascii(r, 1, text.Length) == text;
             switch (command)
             {
-                case "readBrakeCutoff" when Starts("BCOK") && count >= 8:
-                    int threshold = BitConverter.ToUInt16(r, 6);
-                    return r[5] == 1
-                        ? $"Firmware throttle cut: on, above {threshold / 10.0:0.#} % brake"
-                        : $"Firmware throttle cut: off (threshold {threshold / 10.0:0.#} %)";
+                case "readBrakeCutoff":
+                    return ParseBrakeCutoff(r, count)?.ToString();
                 case "read_damping_type" when Starts("OK") && count >= 4:
                     string name = r[3] == 's' ? "soft" : r[3] == 'm' ? "medium" : r[3] == 'h' ? "hard" : $"'{(char)r[3]}' (0x{r[3]:X2})";
                     return $"Elastomer (stored in the firmware): {name}";

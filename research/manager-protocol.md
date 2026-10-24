@@ -4,6 +4,20 @@ Source: static disassembly (objdump; no decompiler) of Simsonn Manager's `bin\SS
 and `bin\SIMSONN Manager.exe` (UI), plus the UI strings in `env\translations\SSRacing_en.ts`, read on 2026-10-24.
 Nothing here was observed at runtime yet: items marked **verify** need a rig test before the plugin relies on them.
 
+## Rig check with plugin 1.0.6 (2026-10-24 20:21–20:23, `rig-data-from-simsonn-manager/new-read`)
+Three **Read pedal settings** reads: at rest, pressing both pedals slowly, after changing the throttle cut in Manager.
+- **Report 6 framing confirmed.** `readBrakeCutoff` → `06 'BCOK' 01 64 00`: firmware throttle cut **on at 10.0 %** in
+  all three reads (the change in Manager didn't reach the pedals, or was set back). `read_damping_type` → `06 'OK' 'h'`
+  (hard, as set in round 2). `read_raw` → `06 'OK'` + 3 × int16: `0, 0, 2625` at rest, `15423, 0, 8927` pressing;
+  not the same scale as the params channels (meaning unknown, not needed).
+- **Params report confirmed.** Packet 0 = `02 00`, firmware `80 20`, sub-version `05 02` (2.0.5), raw channels at byte
+  6 + 2i, processed axis values at byte 22 + 2i. At rest: throttle raw −32767, brake −30148 (raw_min −30341), clutch
+  ≈ −32650. ~33 packets/s. Packet 1 is junk (RAM addresses), ignore it. Channels 3–5 are 0: no second sensors here.
+- **Firmware throttle cut seen in action:** pressing both pedals, throttle raw −17328 (≈ 24 % of its raw range) but
+  throttle processed −32767 (0 %) while brake processed was −16109 (≈ 25 %). The pedals zero the throttle themselves,
+  so the plugin only sees one pedal when both are pressed.
+- Joystick kept working; the settings block was unchanged across the three reads.
+
 ## Summary
 The Manager uses three HID channels on interface MI_01, all 64-byte reports:
 
@@ -36,7 +50,7 @@ Pedal commands used by the Manager (`GraphView` = the throttle/brake page):
 Other commands in `SSCore` belong to other devices (handbrake `handbrake_point`, shifter `hshifter_point`,
 `write_hs_mode`, `setThrottle`, motor `read/write_motortype`, `read/write_offset`, telemetry lights).
 
-## Report 2: params (live raw values) — **verify**
+## Report 2: params (live raw values) — confirmed on the rig
 - The host writes `[2, …]` (`SSCore::writeParam`), and `SSCore` repeats it every 5 s while connected.
 - The device answers with two packets `[2, 0, 62 bytes]` and `[2, 1, 8 bytes]`, joined into a 70-byte struct
   (FreeJoy `params_report_t`).
