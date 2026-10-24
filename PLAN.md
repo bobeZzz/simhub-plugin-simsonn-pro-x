@@ -15,6 +15,8 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 ## How we work
 - The user tests on the rig. They update from the plugin page (**Plugin updates**), so every rig test needs a release.
 - Release: commit and push `main`, then `.\release.ps1 -Version x.y.z` (sets the version, builds, tags, publishes the DLL).
+- Rig checks waiting for the user live in [TESTING.md](TESTING.md): every release adds its checks there; passed ones
+  move to its Passed list.
 - Research on pedal settings: one change in Simsonn Manager per **Read pedal settings** read, labelled with the change;
   diff each read against the previous one.
 
