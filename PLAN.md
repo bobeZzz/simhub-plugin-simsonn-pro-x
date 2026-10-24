@@ -21,7 +21,8 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
   diff each read against the previous one.
 
 ## Decisions (keep unless the user changes them)
-- Output goes through **vJoy**; the game binds to vJoy, not to the pedals.
+- Output goes through **vJoy**; the game binds to vJoy, not to the pedals. Direct mode (planned, D1–D6) is a second
+  output mode beside it, not a replacement.
 - Shaping (dead zone, curve, max force scaling) happens **live in the plugin**. The pedals are set up once to neutral
   (linear, 0–100, filter off, high max force) with **Set up pedals**. Writes to the pedals restart them (USB drops),
   so they are never done per game or per car.
@@ -60,8 +61,55 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-Nothing planned: all phases are released. Next is working through [TESTING.md](TESTING.md) on the rig, then fixes from
-it. Ideas wait under Maybe / parked.
+All vJoy phases are released; their rig checks are in [TESTING.md](TESTING.md). Next is the direct mode below.
+
+### Direct mode: no vJoy (phases D1–D6)
+The plugin writes the active preset into the pedals' own settings, and the game binds to the pedals themselves. Phase 6
+showed the firmware applies dead zones and curves exactly as the plugin does (output ends, then 11 straight segments),
+so a preset can be written without changing how it feels. vJoy mode stays as it is; the user picks the mode.
+
+**Gains:** no vJoy driver, exit guard or vJoy binding; the pedals work with SimHub closed; nothing sits between the
+pedals and the game. **Costs:** every block write restarts the pedals (USB drop of about 1–2 s) and writes flash, so
+presets can't switch freely while driving; shift cut and blip need vJoy and aren't available. Brake throttle cut maps
+onto the firmware's own (report 6 `brakeCutoff`, live, no restart).
+
+| Plugin feature | In direct mode |
+|---|---|
+| Calibration, dead zones, curve, invert | Written into the block (output ends +0/+4, curve points, invert bit) |
+| Brake "100% at" | Output high end = raw min + kg × units/kg (as Set up pedals does for max force) |
+| Clutch | Its own axis in the block, same as throttle |
+| Cut throttle when braking | Firmware `brakeCutoff` (0.1 % steps, brake axis), sent live |
+| Shift cut / blip, bind sweep, exit guard | Not available / not needed |
+| iRacing binding check | Checks the bindings point at the pedals instead of vJoy |
+
+1. **D1 – Check the risky parts on the rig (no code beyond test buttons).**
+   - Is iRacing still bound and working after the pedals restart mid-session (on track, and in the garage)? This
+     decides D4.
+   - Is `brakeCutoff` applied live and kept over a replug (expected from the Manager code)?
+   - Does `damping_max` apply without a restart? If so, brake "100% at" can change live too.
+   - Firmware 2.1.1 disassembly: is there any way to apply the block without the save-and-restart (a RAM-only
+     apply)? Likely not (FreeJoy saves to flash and resets), but worth a look since it would remove the main cost.
+2. **D2 – Preset → settings block (`PedalExport`).** The inverse of `ManagerImport`: start from the block read from
+   the pedals, change only the shaping fields of throttle, brake (and clutch), keep calibration, sensors, buttons and
+   everything else byte for byte. Offline checks: export → import gives the same preset, and the simulated firmware
+   output matches the plugin's within rounding, on the rig dumps.
+3. **D3 – Output mode and writing.** Setting **Output: vJoy / Direct to pedals**. Direct mode doesn't acquire vJoy
+   or start the exit guard; the engine still reads the pedals for the bars. A write reads the block first and skips it
+   when nothing changes (no needless restart or flash write). Writes happen on **Write to pedals**, on Save, and on an
+   automatic preset switch while no game is running. Status line: which preset the pedals hold, and since when.
+   Leaving direct mode offers Set up pedals, so vJoy mode gets neutral pedals again.
+4. **D4 – Per car while a game runs**, depending on D1. If iRacing survives the restart: write on car change only
+   while stopped in the pits or garage, never on track. If not: switch per game only, and say per-car presets need
+   vJoy mode.
+5. **D5 – Live edits.** Dragging a curve point in direct mode would mean one restart per change: edits stay in the
+   plugin (bars show the result) and go to the pedals on Save / Write to pedals, with an "Edits not in the pedals
+   yet" marker. Brake cut (and max force, if D1 allows) go live.
+6. **D6 – UI and checks.** Hide vJoy-only parts in direct mode (vJoy status, bind sweep, shift cut and blip); the
+   binding check looks for the pedals; TESTING.md section for the mode switch, writes, per-car switching and fallback
+   to vJoy mode.
+
+Flash wear: the STM32 page is good for about 10 000 erases; with skipped no-op writes and switching only per car,
+that's years of normal use. Worth a counter in the log anyway.
 
 ## Maybe / parked
 - **Live brake max force** (report 6 `damping_max`, sent by the Manager while the spinner moves). If it applies without
