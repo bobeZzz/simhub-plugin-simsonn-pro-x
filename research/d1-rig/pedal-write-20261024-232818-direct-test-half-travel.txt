@@ -1,0 +1,19 @@
+Result: Written and verified: the pedals hold exactly what was sent.
+SIMSONN pedal settings write, 2026-10-24 23:28:13
+Label: direct test half travel
+
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_00#a&24426209&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 7, out 0, feature 0
+  Input reports:   ID 1 (7 bytes)
+  Output reports:  none
+  Feature reports: none
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 64, out 64, feature 0
+  Input reports:   ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Output reports:  ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Feature reports: none
+
+Writing 1116 bytes in 18 packets to \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Start request answered with [4, 1]
+  Packet 18 (last) answered with no answer
+Last packet sent; waiting for the pedals to restart.

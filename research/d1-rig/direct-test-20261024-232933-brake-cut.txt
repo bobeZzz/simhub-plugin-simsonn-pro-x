@@ -1,0 +1,279 @@
+Result: Didn't cut: throttle reached 97 % with the brake above the level. It cut at about 21 % brake. Set back: Firmware throttle cut: off (threshold 10 %)
+SIMSONN direct mode test (D1): firmware throttle cut at 20 %, 2026-10-24 23:29:21
+Pedals: SIMSONN Pro X Ultra, disconnects so far 0
+
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_00#a&24426209&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 7, out 0, feature 0
+  Input reports:   ID 1 (7 bytes)
+  Output reports:  none
+  Feature reports: none
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 64, out 64, feature 0
+  Input reports:   ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Output reports:  ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Feature reports: none
+
+  readBrakeCutoff:
+    reply: 06 42 43 4F 4B 00 64 00 00 00 00 00 00 00 00 00  "BCOK.d........."
+    Firmware throttle cut: off (threshold 10 %)
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_00#a&24426209&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 7, out 0, feature 0
+  Input reports:   ID 1 (7 bytes)
+  Output reports:  none
+  Feature reports: none
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 64, out 64, feature 0
+  Input reports:   ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Output reports:  ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Feature reports: none
+
+  brakeCutoff (enabled 1, threshold 200):
+    no reply
+  readBrakeCutoff:
+    reply: 06 42 43 4F 4B 01 C8 00 00 00 00 00 00 00 00 00  "BCOK..........."
+    Firmware throttle cut: on, above 20 % brake
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_00#a&24426209&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 7, out 0, feature 0
+  Input reports:   ID 1 (7 bytes)
+  Output reports:  none
+  Feature reports: none
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 64, out 64, feature 0
+  Input reports:   ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Output reports:  ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Feature reports: none
+
+  brakeCutoff (enabled 0, threshold 100):
+    no reply
+  readBrakeCutoff:
+    reply: 06 42 43 4F 4B 00 64 00 00 00 00 00 00 00 00 00  "BCOK.d........."
+    Firmware throttle cut: off (threshold 10 %)
+
+Trace (ms, throttle raw, brake raw, connected, disconnects, mark):
+        0  63937    353 yes   0 
+       52  63937    353 yes   0 
+      102  63937    353 yes   0 
+      153  63937    353 yes   0 
+      205  64023    354 yes   0 
+      255  64038    354 yes   0 
+      306  64038    345 yes   0 
+      357  64038    335 yes   0 
+      409  64038    333 yes   0 
+      461  64038    333 yes   0 
+      512  64040    328 yes   0 
+      564  64058    325 yes   0 
+      614  64058    312 yes   0 
+      665  64058    290 yes   0 
+      715  64058    273 yes   0 
+      766  64088    260 yes   0 
+      808  64100    260 yes   0 cut on
+      859  64100    260 yes   0 
+      911  64100    260 yes   0 
+      962  64100    260 yes   0 
+     1013  64053    341 yes   0 
+     1065  64025    390 yes   0 
+     1116  63984    747 yes   0 
+     1167  63957   2626 yes   0 
+     1219  63936   6859 yes   0 
+     1271  63883  12831 yes   0 
+     1322      0  19234 yes   0 
+     1373      0  25074 yes   0 
+     1423      0  30029 yes   0 
+     1475      0  35140 yes   0 
+     1526      0  39860 yes   0 
+     1578      0  43349 yes   0 
+     1629      0  45649 yes   0 
+     1681      0  47174 yes   0 
+     1732      0  47982 yes   0 
+     1782      0  48733 yes   0 
+     1834      0  49152 yes   0 
+     1885      0  49345 yes   0 
+     1936      0  49209 yes   0 
+     1988      0  48624 yes   0 
+     2040      0  45020 yes   0 
+     2091      0  37740 yes   0 
+     2142      0  29813 yes   0 
+     2193      0  20330 yes   0 
+     2245  64250   9964 yes   0 
+     2296  64272   3449 yes   0 
+     2347  64306   1280 yes   0 
+     2398  64321    755 yes   0 
+     2450  64331    601 yes   0 
+     2503  64341    540 yes   0 
+     2553  64341    504 yes   0 
+     2605  64336    477 yes   0 
+     2655  64321    457 yes   0 
+     2706  64311    438 yes   0 
+     2758  64301    431 yes   0 
+     2810  64301    420 yes   0 
+     2861  64301    406 yes   0 
+     2912  64301    391 yes   0 
+     2962  64301    373 yes   0 
+     3013  64303    379 yes   0 
+     3065  64321    846 yes   0 
+     3116  64265   4551 yes   0 
+     3169      0  13871 yes   0 
+     3220      0  22586 yes   0 
+     3271      0  31592 yes   0 
+     3322      0  37100 yes   0 
+     3373      0  41077 yes   0 
+     3424      0  43891 yes   0 
+     3475      0  45862 yes   0 
+     3526      0  47450 yes   0 
+     3577      0  48437 yes   0 
+     3628      0  49079 yes   0 
+     3680      0  49466 yes   0 
+     3730      0  49716 yes   0 
+     3782      0  49684 yes   0 
+     3833      0  49412 yes   0 
+     3884      0  48508 yes   0 
+     3936      0  45968 yes   0 
+     3988      0  40164 yes   0 
+     4040      0  32116 yes   0 
+     4092      0  21525 yes   0 
+     4143  64353  11641 yes   0 
+     4194  64361   4859 yes   0 
+     4245  64361   1706 yes   0 
+     4295  64361    800 yes   0 
+     4346  64361    556 yes   0 
+     4398  64361    473 yes   0 
+     4450  64361    419 yes   0 
+     4500  64361    372 yes   0 
+     4552  64321    356 yes   0 
+     4603  64262    365 yes   0 
+     4654  64222    662 yes   0 
+     4706  64205   3003 yes   0 
+     4758  64161   8709 yes   0 
+     4810      0  15919 yes   0 
+     4860      0  22968 yes   0 
+     4913      0  30306 yes   0 
+     4964      0  35848 yes   0 
+     5014      0  40639 yes   0 
+     5065      0  44262 yes   0 
+     5116      0  46979 yes   0 
+     5167      0  48443 yes   0 
+     5219      0  49194 yes   0 
+     5270      0  49576 yes   0 
+     5320      0  49879 yes   0 
+     5372      0  49959 yes   0 
+     5422      0  49937 yes   0 
+     5474      0  49743 yes   0 
+     5526      0  49202 yes   0 
+     5578      0  46478 yes   0 
+     5630      0  39801 yes   0 
+     5680      0  30906 yes   0 
+     5732      0  21586 yes   0 
+     5783  64341  12367 yes   0 
+     5834  64341   5052 yes   0 
+     5886  64348   1595 yes   0 
+     5937  64361    689 yes   0 
+     5989  64392    471 yes   0 
+     6041  64402    394 yes   0 
+     6092  64402    341 yes   0 
+     6143  64402    301 yes   0 
+     6194  64402    277 yes   0 
+     6245  64402    270 yes   0 
+     6297  64402    347 yes   0 
+     6347  64341   1347 yes   0 
+     6398  64240   4418 yes   0 
+     6450  64194   9421 yes   0 
+     6501      0  15673 yes   0 
+     6553      0  22436 yes   0 
+     6606      0  30053 yes   0 
+     6658      0  36098 yes   0 
+     6709      0  41373 yes   0 
+     6760      0  45334 yes   0 
+     6812      0  47492 yes   0 
+     6862      0  48658 yes   0 
+     6914      0  49384 yes   0 
+     6964      0  49839 yes   0 
+     7016      0  50160 yes   0 
+     7067      0  50351 yes   0 
+     7119      0  50327 yes   0 
+     7171      0  50195 yes   0 
+     7222      0  49981 yes   0 
+     7272      0  49368 yes   0 
+     7322      0  47313 yes   0 
+     7374      0  41844 yes   0 
+     7426      0  33185 yes   0 
+     7477      0  23948 yes   0 
+     7529      0  14837 yes   0 
+     7581  64321   6062 yes   0 
+     7632  64326   2145 yes   0 
+     7684  64371    802 yes   0 
+     7737  64382    488 yes   0 
+     7788  64348    400 yes   0 
+     7839  64313    346 yes   0 
+     7890  64301    299 yes   0 
+     7942  64301    263 yes   0 
+     7994  64301    224 yes   0 
+     8045  64301    185 yes   0 
+     8097  64301    155 yes   0 
+     8148  64301    126 yes   0 
+     8199  64301     90 yes   0 
+     8250  64301     64 yes   0 
+     8301  64301     46 yes   0 
+     8353  64301     14 yes   0 
+     8403  64301      0 yes   0 
+     8454  64301      0 yes   0 
+     8506  64301      0 yes   0 
+     8557  64301      0 yes   0 
+     8608  64301      0 yes   0 
+     8660  64280      0 yes   0 
+     8712  64280      0 yes   0 
+     8763  64267      0 yes   0 
+     8815  64260      0 yes   0 
+     8865  64260      0 yes   0 
+     8915  64250      0 yes   0 
+     8967  64225      0 yes   0 
+     9018  64220      0 yes   0 
+     9070  64220      0 yes   0 
+     9123  64220      0 yes   0 
+     9175  64210      0 yes   0 
+     9226  64200      0 yes   0 
+     9277  64200      0 yes   0 
+     9329  64200      0 yes   0 
+     9380  64200      0 yes   0 
+     9431  64200      0 yes   0 
+     9482  64197      0 yes   0 
+     9533  64179      0 yes   0 
+     9583  64179      0 yes   0 
+     9635  64197      0 yes   0 
+     9685  64200      0 yes   0 
+     9736  64200      0 yes   0 
+     9787  64200      0 yes   0 
+     9837  64200      0 yes   0 
+     9888  64200      0 yes   0 
+     9939  64200      0 yes   0 
+     9991  64200      0 yes   0 
+    10042  64200      0 yes   0 
+    10093  64179      0 yes   0 
+    10143  64179      0 yes   0 
+    10194  64179      0 yes   0 
+    10246  64179      0 yes   0 
+    10297  64179      0 yes   0 
+    10350  64179      0 yes   0 
+    10401  64179      0 yes   0 
+    10452  64171      0 yes   0 
+    10502  64159      0 yes   0 
+    10553  64159      0 yes   0 
+    10604  64159      0 yes   0 
+    10654  64159      0 yes   0 
+    10705  64139      0 yes   0 
+    10756  64139      0 yes   0 
+    10808  64139      0 yes   0 
+    10860  64139      0 yes   0 
+    10911  64139      0 yes   0 
+    10962  64139      0 yes   0 
+    11013  64139      0 yes   0 
+    11064  64078      0 yes   0 
+    11115  64078      0 yes   0 
+    11166  64078      0 yes   0 
+    11218  64078      0 yes   0 
+    11268  64078      0 yes   0 
+    11319  64078      0 yes   0 
+    11372  64078      0 yes   0 
+    11423  64078      0 yes   0 
+    11475  64078      0 yes   0 
+    11526  64078      0 yes   0 
+    11577  64063      0 yes   0 

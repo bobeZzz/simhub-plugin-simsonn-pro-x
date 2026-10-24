@@ -83,13 +83,14 @@ and reload the settings live (see [research/direct-mode.md](research/direct-mode
 | Shift cut / blip, bind sweep, exit guard | Not available / not needed |
 | iRacing binding check | Checks the bindings point at the pedals instead of vJoy |
 
-1. **D1 – Check the risky parts.** Firmware part done; rig tests in 1.0.20 (Direct mode tests, see TESTING.md).
+1. **D1 – Check the risky parts. Done (1.0.20, rig 2026-10-24 on 2.1.1).**
    - Firmware (2.0.8 and 2.1.1): block writes save to flash and reload live with no reset; `damping_max` changes the
      brake's raw max and high end live and saves them; `brakeCutoff` is live, capped at 50 %. No RAM-only apply exists:
      every change writes flash.
-   - Rig, pending: **Live write test** (applies live? pedals stay connected?), **Live max force test**, **Firmware
-     brake cut test**. If the pedals do drop off, also check iRacing keeps working after a write mid-session; that
-     decides D4.
+   - Rig: a block write applied live with the pedals staying connected; `damping_max` applied in about 0.2 s and was
+     saved; the firmware brake cut works (cut at about 21 % for 20 %). Every test put the settings back exactly.
+   - Open for D3: time the joystick pause of a write on its own. Reads pause the pedals' reports for about 2 s, so
+     direct mode writes from the block it holds instead of re-reading before every write.
 2. **D2 – Preset → settings block (`PedalExport`).** The inverse of `ManagerImport`: start from the block read from
    the pedals, change only the shaping fields of throttle, brake (and clutch), keep calibration, sensors, buttons and
    everything else byte for byte. Offline checks: export → import gives the same preset, and the simulated firmware

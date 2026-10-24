@@ -53,19 +53,6 @@ Every new release adds its checks here.
 - [ ] Paddle-to-cut delay feels fine (SimHub reads the paddles, then the plugin). If the cut lands late, say so.
 - [ ] Old presets load with all three off and aren't marked unsaved.
 
-### 1.0.20 – Direct mode tests (D1, no vJoy)
-Under **Pedal firmware settings → Direct mode tests**. Close Simsonn Manager first. Each test puts the pedals' settings
-back by itself; its result line names a report in the dump folder (**Open folder**). Send those reports.
-- [ ] **Live write test**: hold the throttle about halfway for the whole test (~15 s). Expected: "Applied live:
-      throttle ~50 % → ~100 %", "stayed connected", "put back and verified".
-- [ ] **Live max force test**: hold the brake lightly (20–40 %) and steady for ~10 s. Expected: "Applied live",
-      "Saved in the pedals' settings", "stayed connected", "back exactly as before".
-- [ ] **Firmware brake cut test** at 20 %: hold the throttle down, press the brake past 20 % and back a few times
-      within the 10 s. Expected: "Works", the brake % where it cut, and "Set back: … off".
-- [ ] After all three, **Read pedal settings**: the description matches what it was before the tests.
-- [ ] Only if the live write test says the pedals dropped off: bind iRacing's throttle to the pedals directly, run the
-      live write test in the garage, and check iRacing still sees the throttle afterwards. Rebind to vJoy after.
-
 ## Older, still open
 - [ ] **Save / Revert** (1.0.5): edit, Save, edit again, Revert returns to the saved values; Save as moves the edits to
       the new preset.
@@ -75,4 +62,7 @@ back by itself; its result line names a report in the dump folder (**Open folder
       to vJoy instead.
 
 ## Passed
+- 1.0.20 – Direct mode tests (D1) on firmware 2.1.1, 2026-10-24: live write applied with the pedals connected; live
+  max force applied in about 0.2 s and saved; firmware brake cut works (the page wrongly said "Didn't cut", fixed in
+  the next release); settings put back exactly every time.
 - 1.0.14 – Save for this class in iRacing (single-class session), 2026-10-24.

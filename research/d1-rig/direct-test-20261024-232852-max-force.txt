@@ -1,0 +1,160 @@
+Result: Applied live: brake 28 % → 57 % at the same press, after 219 ms. Saved in the pedals' settings. The pedals stayed connected. Settings back exactly as before.
+SIMSONN direct mode test (D1): live brake max force (damping_max), 2026-10-24 23:28:45
+Pedals: SIMSONN Pro X Ultra, disconnects so far 0
+
+Brake axis 4: raw 2929…15509, output ends 2929…15509; test raw max 9219, high end 9219
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_00#a&24426209&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 7, out 0, feature 0
+  Input reports:   ID 1 (7 bytes)
+  Output reports:  none
+  Feature reports: none
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 64, out 64, feature 0
+  Input reports:   ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Output reports:  ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Feature reports: none
+
+  damping_max (raw max 9219, output high end 9219):
+    reply: 06 44 4D 4F 4B 00 00 00 00 00 00 00 00 00 00 00  "DMOK..........."
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_00#a&24426209&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 7, out 0, feature 0
+  Input reports:   ID 1 (7 bytes)
+  Output reports:  none
+  Feature reports: none
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 64, out 64, feature 0
+  Input reports:   ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Output reports:  ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Feature reports: none
+
+  damping_max (raw max 15509, output high end 15509):
+    reply: 06 44 4D 4F 4B 00 00 00 00 00 00 00 00 00 00 00  "DMOK..........."
+
+Trace (ms, throttle raw, brake raw, connected, disconnects, mark):
+        0    242  18588 yes   0 
+       51    242  18588 yes   0 
+      102    242  18588 yes   0 
+      152    242  18588 yes   0 
+      203    242  18588 yes   0 
+      254    242  18588 yes   0 
+      305    242  18588 yes   0 
+      355    242  18588 yes   0 
+      406    242  18588 yes   0 
+      457    242  18588 yes   0 
+      508    242  18588 yes   0 
+      559    242  18588 yes   0 
+      609    242  18588 yes   0 
+      661    242  18588 yes   0 
+      712    242  18588 yes   0 
+      763    242  18588 yes   0 
+      814    242  18588 yes   0 
+      865    242  18588 yes   0 
+      916    242  18588 yes   0 
+      968    242  18588 yes   0 
+     1018    242  18588 yes   0 
+     1069    242  18588 yes   0 
+     1120    242  18588 yes   0 
+     1171    242  18588 yes   0 
+     1221    242  18588 yes   0 
+     1272    242  18588 yes   0 
+     1322    242  18588 yes   0 
+     1373    242  18588 yes   0 
+     1424    323  18541 yes   0 
+     1474    323  18541 yes   0 
+     1526    323  18541 yes   0 
+     1577    323  18541 yes   0 
+     1627    323  18541 yes   0 
+     1679    323  18541 yes   0 
+     1731    323  18545 yes   0 
+     1782    323  18546 yes   0 
+     1832    303  18552 yes   0 
+     1883    303  18556 yes   0 
+     1933    303  18563 yes   0 
+     1984    303  18575 yes   0 
+     2034    293  18577 yes   0 
+     2086    283  18577 yes   0 
+     2137    283  18577 yes   0 
+     2188    283  18577 yes   0 
+     2239    283  18577 yes   0 
+     2290    303  18577 yes   0 
+     2341    303  18572 yes   0 
+     2393    303  18572 yes   0 
+     2446    303  18572 yes   0 
+     2496    303  18572 yes   0 
+     2506    303  18572 yes   0 half force
+     2557    303  18572 yes   0 
+     2607    303  18572 yes   0 
+     2659    303  18572 yes   0 
+     2709    303  18572 yes   0 
+     2760    303  37154 yes   0 
+     2811    303  37161 yes   0 
+     2861    303  37164 yes   0 
+     2912    303  37168 yes   0 
+     2962    303  37175 yes   0 
+     3012    303  37175 yes   0 
+     3063    303  37175 yes   0 
+     3114    303  37175 yes   0 
+     3164    286  37175 yes   0 
+     3215    283  37175 yes   0 
+     3266    283  37175 yes   0 
+     3317    283  37175 yes   0 
+     3367    283  37161 yes   0 
+     3419    283  37154 yes   0 
+     3469    291  37154 yes   0 
+     3519    303  37154 yes   0 
+     3571    303  37154 yes   0 
+     3621    303  37154 yes   0 
+     3671    303  37154 yes   0 
+     3722    303  37154 yes   0 
+     3772    303  37154 yes   0 
+     3824    303  37154 yes   0 
+     3876    303  37154 yes   0 
+     3928    303  37154 yes   0 
+     3978    303  37160 yes   0 
+     4029    303  37169 yes   0 
+     4081    303  37169 yes   0 
+     4131    303  37169 yes   0 
+     4182    303  37169 yes   0 
+     4233    303  37169 yes   0 
+     4284    303  37169 yes   0 
+     4336    303  37169 yes   0 
+     4386    303  37169 yes   0 
+     4437    303  37169 yes   0 
+     4489    303  37169 yes   0 
+     4540    303  37169 yes   0 
+     4592    303  37169 yes   0 
+     4642    303  37169 yes   0 
+     4692    303  37169 yes   0 restore
+     4744    303  37169 yes   0 
+     4795    303  37169 yes   0 
+     4848    303  37169 yes   0 
+     4899    303  37169 yes   0 
+     4950    262  18593 yes   0 
+     5000    262  18593 yes   0 
+     5051    278  18593 yes   0 
+     5102    283  18593 yes   0 
+     5152    270  18593 yes   0 
+     5204    262  18593 yes   0 
+     5255    262  18588 yes   0 
+     5306    262  18588 yes   0 
+     5356    262  18588 yes   0 
+     5407    262  18588 yes   0 
+     5459    283  18593 yes   0 
+     5509    283  18593 yes   0 
+     5562    283  18588 yes   0 
+     5612    283  18588 yes   0 
+     5663    283  18588 yes   0 
+     5714    283  18588 yes   0 
+     5764    283  18588 yes   0 
+     5815    283  18588 yes   0 
+     5866    283  18588 yes   0 
+     5916    283  18588 yes   0 
+     5968    283  18588 yes   0 
+     6019    283  18588 yes   0 
+     6070    283  18588 yes   0 
+     6120    283  18588 yes   0 
+     6171    283  18588 yes   0 
+     6222    283  18588 yes   0 
+     6274    283  18588 yes   0 
+     6324    283  18588 yes   0 
+     6374    283  18588 yes   0 

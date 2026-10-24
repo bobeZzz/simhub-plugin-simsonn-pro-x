@@ -117,10 +117,12 @@ namespace SimsonnPedals
                     lines.Add($"Inconclusive: needs the throttle held (seen up to {Pct(below.Select(x => (double)x.Throttle).DefaultIfEmpty(0).Max())}) with the brake both below and above {thresholdTenths / 10.0:0.#} %.");
                 else
                 {
-                    double heldMax = above.Max(x => x.Throttle);
-                    lines.Add(heldMax < FullScale * 0.02
-                        ? $"Works: throttle up to {Pct(below.Max(x => x.Throttle))} with the brake below the level, 0 above it."
-                        : $"Didn't cut: throttle reached {Pct(heldMax)} with the brake above the level.");
+                    // A sample or two right as the brake crosses the level can still show the throttle up (the two axes
+                    // aren't read at the same instant), so judge by the share of samples above the level that were cut.
+                    double cutShare = above.Count(x => x.Throttle < FullScale * 0.02) / (double)above.Count;
+                    lines.Add(cutShare >= 0.9
+                        ? $"Works: throttle up to {Pct(below.Max(x => x.Throttle))} with the brake below the level, 0 above it ({cutShare:P0} of samples above the level)."
+                        : $"Didn't cut: the throttle stayed up in {1 - cutShare:P0} of the samples with the brake above the level.");
                     // Where it cut: the lowest brake value seen with the throttle at 0 right after it was up.
                     double? cutAt = during.Zip(during.Skip(1), (a, b) => a.Throttle > FullScale * 0.1 && b.Throttle < FullScale * 0.02 ? (double?)b.Brake : null)
                         .Where(v => v != null).DefaultIfEmpty(null).Min();

@@ -62,4 +62,22 @@ From the settings dumps and write logs (the `direct-test-*.txt` reports weren't 
   end and raw max (`0x112–0x115`, `0x118–0x119`; raw max 15509 → 9219). The block read right after shows them:
   **saved to flash**. The restore brought the block back byte for byte, both runs.
 - **Firmware brake cut test**: not run yet.
-- Still to read from the reports: whether each change applied live while held, and whether DirectInput lost the pedals.
+
+### Rig run 2026-10-24 23:28–23:29 (firmware 2.1.1, reports in `d1-rig/direct-test-*.txt`)
+- **Live write test: passed.** Throttle held at 51.8 % jumped to 100 % with no disconnect; restore verified.
+  The trace shows the throttle reading *unchanged* for 2.7 s after the test began. That span covers the re-read
+  before writing, the 18 packets and the read-back, so it doesn't time the apply itself. Reads are known to pause the
+  pedals' joystick reports (about 2 s, "the pedals stop responding" in the UI texts); a constant value can also just
+  be a steady foot (the throttle's raw span is only 3240 units on this calibration).
+- **Live max force test: passed.** Brake 28 % → 57 % at the same press **219 ms** after `damping_max` was sent,
+  saved in the stored settings, no disconnect, settings back byte for byte.
+- **Firmware brake cut test at 20 %: works.** Five presses: throttle 98 % → 0 within one 50 ms trace step each time
+  the brake passed the level, back to 98 % on release; the cut point came out at about 21 %. The page said "Didn't
+  cut" because the summary treated any single 10 ms sample with the throttle still up above the level as a failure;
+  those are the crossing instants (the two axes aren't sampled at the same moment). Fixed in the next release.
+  Set back to off (threshold 10 %).
+
+**D1 result:** writes and `damping_max` apply live and the pedals stay connected, so direct mode doesn't need to
+avoid writing while driving. Open for D3: how long a *write alone* (no reads around it) pauses the joystick reports.
+Direct mode should write from the block it already holds, without re-reading each time, and the D3 test should time
+the pause.
