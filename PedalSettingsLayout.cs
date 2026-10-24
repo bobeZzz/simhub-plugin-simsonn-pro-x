@@ -9,8 +9,17 @@ namespace SimsonnPedals
     /// </summary>
     public static class PedalSettingsLayout
     {
-        public const int ThrottleAxis = 0;
-        public const int BrakeAxis = 1;
+        /// <summary>
+        /// First of the three pedal axes (throttle, brake, clutch) in use: 0 on 2.0.x, 3 on 2.1.x. Simsonn Manager's 2.1
+        /// defaults, which 2.1.1 reset the rig to, switch axes 0–2 off (source pin −1) and drive axes 3–5 from the same
+        /// sensors. The params report's raw channel i belongs to axis i, so the same index picks the raw channel.
+        /// </summary>
+        public static int PedalAxisBase(byte[] block) => !IsAxisUsed(block, 0) && IsAxisUsed(block, 3) ? 3 : 0;
+
+        public static int ThrottleAxis(byte[] block) => PedalAxisBase(block);
+        public static int BrakeAxis(byte[] block) => PedalAxisBase(block) + 1;
+
+        private static bool IsAxisUsed(byte[] block, int axis) => block[AxisBase + AxisSize * axis + SourceMain] != SourceNone;
 
         /// <summary>
         /// Raw load-cell units per kg of max force on a calibrated brake, or null for a firmware the plugin doesn't know.
@@ -33,13 +42,14 @@ namespace SimsonnPedals
         }
 
         /// <summary>
-        /// True for firmware whose settings layout was mapped on the rig (2.0.x). Writes stay off on anything else,
-        /// e.g. 2.1.x after a firmware update, until a dump has been compared.
+        /// True for firmware whose settings layout the plugin knows: 2.0.x (mapped on the rig) and 2.1.x (the 2.1.1 dump
+        /// after the rig's update has the same axis entries, with the pedals on axes 3–5), and only when the throttle
+        /// and brake axes are actually in use.
         /// </summary>
         public static bool IsLayoutVerified(byte[] block)
         {
             int? version = FirmwareVersionCode(block);
-            return version >= 200 && version <= 209;
+            return version >= 200 && version <= 219 && IsAxisUsed(block, ThrottleAxis(block)) && IsAxisUsed(block, BrakeAxis(block));
         }
 
         /// <summary>Firmware version for display, e.g. "2.0.8".</summary>
@@ -54,6 +64,8 @@ namespace SimsonnPedals
         private const int OutLow = 0, OutCentre = 2, OutHigh = 4, RawMin = 6, RawMax = 8;
         private const int Flags = 10, Curve = 11, CurvePoints = 11, DeadzoneStart = 34, DeadzoneEndGap = 35;
         private const int FilterMask = 0xE0, FilterShift = 5;
+        private const int SourceMain = 24; // ADC pin feeding the axis (11 on this rig), 0xFF = off
+        private const byte SourceNone = 0xFF;
 
         public sealed class AxisSettings
         {
@@ -87,7 +99,7 @@ namespace SimsonnPedals
         /// </summary>
         public static double? BrakeMaxForceKg(byte[] block)
         {
-            var brake = ReadAxis(block, BrakeAxis);
+            var brake = ReadAxis(block, BrakeAxis(block));
             double? units = UnitsPerKg(block);
             return units == null ? (double?)null : Math.Round((brake.RawMax - brake.RawMin) / units.Value, 1);
         }
@@ -106,7 +118,7 @@ namespace SimsonnPedals
             string maxForce = kg == null
                 ? $", max force unknown (firmware {FirmwareVersionText(block)})"
                 : $", max force {kg:0.#} kg";
-            return Axis("Throttle", ThrottleAxis, "") + Environment.NewLine + Axis("Brake", BrakeAxis, maxForce);
+            return Axis("Throttle", ThrottleAxis(block), "") + Environment.NewLine + Axis("Brake", BrakeAxis(block), maxForce);
         }
 
         /// <summary>True if the block already matches what <see cref="BaseSetup"/> would produce.</summary>
@@ -123,17 +135,17 @@ namespace SimsonnPedals
         {
             if (!IsLayoutVerified(block))
                 throw new NotSupportedException(
-                    $"The plugin's settings layout is only checked on firmware 2.0.x; these pedals run {FirmwareVersionText(block)}. " +
+                    $"The plugin doesn't know this settings layout (firmware {FirmwareVersionText(block)}, or the throttle/brake axes are switched off). " +
                     "Use Read pedal settings and share the dump so the layout can be checked.");
             double unitsPerKg = UnitsPerKg(block) ?? throw new NotSupportedException(
                 $"The plugin doesn't know how firmware {FirmwareVersionText(block)} scales max force.");
             var result = (byte[])block.Clone();
-            foreach (int axis in new[] { ThrottleAxis, BrakeAxis })
+            foreach (int axis in new[] { ThrottleAxis(block), BrakeAxis(block) })
             {
                 int o = AxisBase + AxisSize * axis;
                 int rawMin = BitConverter.ToInt16(block, o + RawMin);
                 int rawMax = BitConverter.ToInt16(block, o + RawMax);
-                if (axis == BrakeAxis)
+                if (axis == BrakeAxis(block))
                 {
                     long target = rawMin + (long)Math.Round(brakeMaxForceKg * unitsPerKg);
                     if (brakeMaxForceKg < 5 || target > short.MaxValue)
@@ -168,24 +180,24 @@ namespace SimsonnPedals
             if (throttleFull - throttleRest < MinCalibrationSpan)
                 throw new ArgumentOutOfRangeException(nameof(throttleFull), "The throttle didn't move enough: press it fully during calibration.");
             var result = (byte[])block.Clone();
-            int throttle = AxisBase + AxisSize * ThrottleAxis;
+            int throttle = AxisBase + AxisSize * ThrottleAxis(block);
             WriteInt16(result, throttle + RawMin, throttleRest);
             WriteInt16(result, throttle + RawMax, throttleFull);
-            WriteInt16(result, AxisBase + AxisSize * BrakeAxis + RawMin, brakeRest);
+            WriteInt16(result, AxisBase + AxisSize * BrakeAxis(block) + RawMin, brakeRest);
             return BaseSetup(result, brakeMaxForceKg);
         }
 
         /// <summary>The calibration stored in the pedals, for display.</summary>
         public static string DescribeCalibration(byte[] block)
         {
-            var throttle = ReadAxis(block, ThrottleAxis);
-            var brake = ReadAxis(block, BrakeAxis);
+            var throttle = ReadAxis(block, ThrottleAxis(block));
+            var brake = ReadAxis(block, BrakeAxis(block));
             return $"Throttle raw {throttle.RawMin} (rest) … {throttle.RawMax} (full); brake raw {brake.RawMin} (rest)";
         }
 
         /// <summary>Highest max force the brake's calibration leaves room for (the firmware must be known).</summary>
         public static double MaxBrakeForceKg(byte[] block) =>
-            Math.Floor((short.MaxValue - ReadAxis(block, BrakeAxis).RawMin) / UnitsPerKg(block).Value);
+            Math.Floor((short.MaxValue - ReadAxis(block, BrakeAxis(block)).RawMin) / UnitsPerKg(block).Value);
 
         private static void WriteInt16(byte[] block, int offset, int value)
         {

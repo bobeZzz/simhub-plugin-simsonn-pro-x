@@ -12,7 +12,9 @@ namespace SimsonnPedals
     /// </summary>
     public sealed class PedalRawMonitor : IDisposable
     {
-        public const int Channels = 3; // throttle, brake, clutch
+        // Raw channel i belongs to settings axis i: throttle, brake, clutch on 0–2 (firmware 2.0.x) or 3–5 (2.1.x),
+        // see PedalSettingsLayout.PedalAxisBase.
+        public const int Channels = 6;
 
         private const byte ReportIdParams = 2;
         private const int RequestEveryMs = 1000;

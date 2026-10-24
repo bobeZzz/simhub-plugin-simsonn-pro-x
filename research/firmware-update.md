@@ -100,3 +100,15 @@ All packets are 64 bytes.
   been compared with 2.0.8.
 - **Risk:** if the main flash stops part way, the pedals should come back as the bootloader, and the Manager detects
   flasher devices and can flash again. That recovery path is not proven on this rig.
+
+## After the update to 2.1.1 (rig, 1.0.10)
+- Versions: params packet 0 reads `02 00 10 21 06 02`, i.e. main 0x2110 (2.1.1) and second chip 0x0206 (2.0.6).
+  Right after the restart the second chip reads 0x0000 for a while.
+- The settings block was reset to Simsonn Manager's 2.1 defaults (`env/Default_ProXUltra`, FirmwareVersion=2100):
+  - axes 0–2: `SourceMain=-1` (byte +24 = 0xFF), flags +10 = 0x00, raw −32767…32767;
+  - axes 3–5: `SourceMain=11` (+24 = 0x0B), `OutEnabled=1` (+10 bit 0), raw −32767…32767, dead zone 5–95.
+- The axis entry layout is otherwise unchanged. The params report's raw channel i still belongs to axis i, so the
+  sensors now show on channels 3–5.
+- Raw values are small on 2.1.1, ≈2575 (throttle), 3003 (brake), 108 (clutch) at rest; the units/kg drop from 300 to
+  148 fits that.
+- Survived the update: firmware throttle cut (off, 10 %) and elastomer (hard), both stored outside the block.

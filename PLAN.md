@@ -57,6 +57,19 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
      pedals in update mode.
    - 1.0.10 sends the second chip to the flasher. Update firmware also finishes from update mode: it flashes both
      chips again without the bootloader command.
+   - **1.0.10 on the rig: update to 2.1.1 / 2.0.6 done.** The read-back saw the second chip as 0.0.0 because it read
+     too early; a dump a minute later showed 0x0206. 1.0.11 keeps reading until the second chip answers.
+   - **2.1.1 reset the settings block to the Manager's 2.1 defaults (`env/Default_ProXUltra`):**
+     - axes 0–2 are off (source 0xFF);
+     - the pedals are on axes 3–5 (source 11), with dead zone 5–95;
+     - calibration is wiped (raw −32767…32767);
+     - the params report's raw channels 3–5 carry the sensors (≈2575 / 3003 / 108 at rest);
+     - throttle cut (off) and elastomer (hard) survived.
+   - 1.0.11 finds the pedal axes from the source byte (`PedalAxisBase`: 0 on 2.0.x, 3 on 2.1.x), and allows Set up and
+     Calibrate on 2.1.x with 148 units/kg (from the Manager's code, untested).
+   - Rig check for 1.0.11:
+     - calibrate from the plugin;
+     - check that the bars and the HID joystick still move. Which HID axes 2.1.1 sends axes 3–5 to is unknown.
    - Protocol: `research/firmware-update.md`.
    - Code: `FirmwareFile` reads and decrypts the `.sfu` files using the key from the user's Manager install, and checks
      model and CRCs. `PedalFirmwareUpdater` does bootloader run → flasher report 5 → second chip report 7 → version

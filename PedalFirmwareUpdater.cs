@@ -131,10 +131,12 @@ namespace SimsonnPedals
                 return Finish(false, true, "Both chips were written, but the pedals stayed in update mode. Unplug and replug the USB cable, " +
                                            "then use Check firmware to confirm the versions.", report);
             (ushort Main, ushort Sub)? after = null;
-            for (int attempt = 0; attempt < 10 && after == null; attempt++)
+            // Right after the restart the main chip reports the second chip as 0x0000 until it has asked it (seen on the
+            // rig with 1.0.10; a read a minute later showed 0x0206), so keep reading until it answers.
+            for (int attempt = 0; attempt < 15 && (after == null || after.Value.Sub == 0); attempt++)
             {
                 Thread.Sleep(1000);
-                after = PedalRawMonitor.ReadVersions(vendorId, productId, 2000, out versionError);
+                after = PedalRawMonitor.ReadVersions(vendorId, productId, 2000, out versionError) ?? after;
             }
             if (after == null)
                 return Finish(false, true, "Flashed, but the pedals didn't report their version afterwards. Replug them and use Read pedal settings to check.", report);

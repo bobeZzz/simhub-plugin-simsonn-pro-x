@@ -300,15 +300,33 @@ namespace SimsonnPedals.UI
         private PedalRawMonitor rawMonitor;
         private System.Windows.Threading.DispatcherTimer calibrationTimer;
         private bool calibrationCapturing;
+        private int calibrationAxisBase; // raw channel of the throttle; the brake is the next one
 
-        private void OnCalibratePedalsClick(object sender, RoutedEventArgs e)
+        private async void OnCalibratePedalsClick(object sender, RoutedEventArgs e)
         {
             if (plugin.IsGameRunning)
             {
                 MessageBox.Show("Exit the game first: the pedals restart when the calibration is saved.", "SIMSONN Pedals");
                 return;
             }
-            rawMonitor = PedalRawMonitor.Open(plugin.Settings.VendorId, plugin.Settings.ProductId, out string error);
+            // Which axes carry the pedals depends on the firmware's settings (0–2 on 2.0.x, 3–5 on 2.1.x).
+            SetPedalButtonsEnabled(false);
+            PedalSettingsStatus.Text = "Reading the current settings…";
+            int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
+            var current = await Task.Run(() => PedalConfigReader.Read(vid, pid, "before calibration start"));
+            SetPedalButtonsEnabled(true);
+            if (!current.Success)
+            {
+                PedalSettingsStatus.Text = "Can't calibrate: " + current.Summary;
+                return;
+            }
+            if (!PedalSettingsLayout.IsLayoutVerified(current.Data))
+            {
+                PedalSettingsStatus.Text = $"Can't calibrate: the plugin doesn't know the settings layout of firmware {PedalSettingsLayout.FirmwareVersionText(current.Data)}.";
+                return;
+            }
+            calibrationAxisBase = PedalSettingsLayout.PedalAxisBase(current.Data);
+            rawMonitor = PedalRawMonitor.Open(vid, pid, out string error);
             if (rawMonitor == null)
             {
                 PedalSettingsStatus.Text = "Can't calibrate: " + error;
@@ -345,11 +363,12 @@ namespace SimsonnPedals.UI
                 return;
             }
             var now = rawMonitor.Latest;
-            string text = $"Throttle {now[0],6}   Brake {now[1],6}";
+            int t = calibrationAxisBase, b = calibrationAxisBase + 1;
+            string text = $"Throttle {now[t],6}   Brake {now[b],6}";
             if (calibrationCapturing && rawMonitor.Samples > 0)
             {
                 int[] min = rawMonitor.Min, max = rawMonitor.Max;
-                text += $"   |   throttle {min[0]}…{max[0]}, brake {min[1]}…{max[1]}";
+                text += $"   |   throttle {min[t]}…{max[t]}, brake {min[b]}…{max[b]}";
             }
             CalibrationLive.Text = text;
         }
@@ -412,7 +431,10 @@ namespace SimsonnPedals.UI
                 byte[] wanted;
                 try
                 {
-                    wanted = PedalSettingsLayout.Calibrate(current.Data, min[0], max[0], min[1], kg);
+                    int t = calibrationAxisBase, b = calibrationAxisBase + 1;
+                    if (PedalSettingsLayout.PedalAxisBase(current.Data) != calibrationAxisBase)
+                        throw new NotSupportedException("The pedals' axis setup changed during calibration. Start again.");
+                    wanted = PedalSettingsLayout.Calibrate(current.Data, min[t], max[t], min[b], kg);
                 }
                 catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is NotSupportedException)
                 {

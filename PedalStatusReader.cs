@@ -222,10 +222,13 @@ namespace SimsonnPedals
 
             report.AppendLine($"    {packets} params packet(s), {firstPackets} of them packet 0");
             if (firstPackets == 0) return null;
-            string[] names = { "throttle", "brake", "clutch", "throttle 2nd", "brake 2nd", "clutch 2nd" };
+            // Axes 0–2 carry the pedals on firmware 2.0.x, axes 3–5 on 2.1.x (PedalSettingsLayout.PedalAxisBase).
             for (int i = 0; i < Channels; i++)
-                report.AppendLine($"    channel {i} ({names[i]}): raw {rawMin[i]}…{rawMax[i]}, processed {outMin[i]}…{outMax[i]}");
-            return $"Raw sensors: throttle {rawMin[0]}…{rawMax[0]}, brake {rawMin[1]}…{rawMax[1]} ({firstPackets} samples)";
+                report.AppendLine($"    channel {i} (axis {i}, {(i % 3 == 0 ? "throttle" : i % 3 == 1 ? "brake" : "clutch")}): " +
+                                  $"raw {rawMin[i]}…{rawMax[i]}, processed {outMin[i]}…{outMax[i]}");
+            bool silent(int i) => rawMin[i] == 0 && rawMax[i] == 0;
+            int t = silent(0) && silent(1) && !(silent(3) && silent(4)) ? 3 : 0;
+            return $"Raw sensors (channels {t}–{t + 1}): throttle {rawMin[t]}…{rawMax[t]}, brake {rawMin[t + 1]}…{rawMax[t + 1]} ({firstPackets} samples)";
         }
 
         /// <summary>The single write path: only a params request or one of <see cref="ReadCommands"/> may be sent.</summary>
