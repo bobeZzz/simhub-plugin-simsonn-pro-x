@@ -32,6 +32,8 @@ namespace SimsonnPedals.UI
             VJoyDeviceCombo.ItemsSource = Enumerable.Range(1, 16).Select(i => (uint)i).ToList();
             VJoyDeviceCombo.SelectedItem = plugin.Settings.VJoyDeviceId;
             AutoApplyToggle.IsChecked = plugin.Settings.AutoApplyPerGame;
+            double pedalMax = plugin.ActivePreset.Brake.FirmwareMaxForceKg;
+            SetupMaxForceBox.Text = (pedalMax > 0 ? pedalMax : 100).ToString("0.#");
 
             BindActivePreset();
 
@@ -153,6 +155,7 @@ namespace SimsonnPedals.UI
                 PedalSettingsStatus.Text = result.ReportPath == null
                     ? result.Summary
                     : $"{result.Summary} Saved to {Path.GetFileName(result.ReportPath)}{(result.BinaryPath != null ? " and .bin" : "")}.";
+                if (result.Success) PedalSettingsStatus.Text += Environment.NewLine + PedalSettingsLayout.Describe(result.Data);
             }
             catch (Exception ex)
             {
@@ -163,6 +166,80 @@ namespace SimsonnPedals.UI
                 ReadPedalSettingsButton.IsEnabled = true;
             }
         }
+
+        private async void OnSetupPedalsClick(object sender, RoutedEventArgs e)
+        {
+            if (plugin.IsGameRunning)
+            {
+                MessageBox.Show("Exit the game first: the pedals restart while they save.", "SIMSONN Pedals");
+                return;
+            }
+            if (!double.TryParse(SetupMaxForceBox.Text.Replace(',', '.'), System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double kg))
+            {
+                PedalSettingsStatus.Text = "Enter the brake max force in kg.";
+                return;
+            }
+
+            SetPedalButtonsEnabled(false);
+            PedalSettingsStatus.Text = "Reading the current settings…";
+            try
+            {
+                int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
+                var current = await Task.Run(() => PedalConfigReader.Read(vid, pid, "before setup"));
+                if (!current.Success)
+                {
+                    PedalSettingsStatus.Text = "Nothing was written: " + current.Summary;
+                    return;
+                }
+
+                byte[] wanted;
+                try
+                {
+                    wanted = PedalSettingsLayout.BaseSetup(current.Data, kg);
+                }
+                catch (ArgumentOutOfRangeException ex)
+                {
+                    // The message's second line is the parameter name.
+                    PedalSettingsStatus.Text = "Nothing was written: " + ex.Message.Split(new[] { Environment.NewLine }, StringSplitOptions.None)[0];
+                    return;
+                }
+                if (wanted.SequenceEqual(current.Data))
+                {
+                    plugin.SetPedalMaxForce(kg);
+                    PedalSettingsStatus.Text = "The pedals are already set up this way." + Environment.NewLine + PedalSettingsLayout.Describe(current.Data);
+                    return;
+                }
+
+                if (MessageBox.Show(
+                        "Now in the pedals:\n" + PedalSettingsLayout.Describe(current.Data) +
+                        "\n\nAfter setup:\n" + PedalSettingsLayout.Describe(wanted) +
+                        "\n\nCalibration is kept. The pedals save and restart, so they drop off USB for a few seconds. " +
+                        "Close Simsonn Manager first. The current settings were saved to the dump folder. Write?",
+                        "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                {
+                    PedalSettingsStatus.Text = "Nothing was written.";
+                    return;
+                }
+
+                PedalSettingsStatus.Text = "Writing the settings to the pedals…";
+                var result = await Task.Run(() => PedalConfigWriter.Write(vid, pid, current.Data, wanted, "setup"));
+                if (result.Success) plugin.SetPedalMaxForce(kg);
+                PedalSettingsStatus.Text = result.ReportPath == null ? result.Summary : $"{result.Summary} Report: {Path.GetFileName(result.ReportPath)}.";
+                if (result.Success) PedalSettingsStatus.Text += Environment.NewLine + PedalSettingsLayout.Describe(wanted);
+            }
+            catch (Exception ex)
+            {
+                PedalSettingsStatus.Text = "Failed: " + ex.Message;
+            }
+            finally
+            {
+                SetPedalButtonsEnabled(true);
+            }
+        }
+
+        private void SetPedalButtonsEnabled(bool enabled) =>
+            ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = SetupPedalsButton.IsEnabled = enabled;
 
         private async void OnRewriteTestClick(object sender, RoutedEventArgs e)
         {
@@ -178,7 +255,7 @@ namespace SimsonnPedals.UI
                     "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
                 return;
 
-            ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = false;
+            SetPedalButtonsEnabled(false);
             PedalSettingsStatus.Text = "Rewrite test: reading, writing and reading back…";
             try
             {
@@ -194,7 +271,7 @@ namespace SimsonnPedals.UI
             }
             finally
             {
-                ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = true;
+                SetPedalButtonsEnabled(true);
             }
         }
 

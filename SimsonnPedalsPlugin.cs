@@ -160,6 +160,12 @@ namespace SimsonnPedals
             Save();
         }
 
+        /// <summary>Records the max force now stored in the pedals in every preset (call on the UI thread).</summary>
+        public void SetPedalMaxForce(double kg)
+        {
+            foreach (var preset in Settings.Presets.Values) preset.Brake.FirmwareMaxForceKg = kg;
+        }
+
         public bool DeletePreset(string name)
         {
             if (string.Equals(name, PluginSettings.DefaultPresetName, StringComparison.OrdinalIgnoreCase)) return false;

@@ -61,6 +61,13 @@
                         <styles:SHButtonSecondary Click="OnOpenDumpFolderClick">Open folder</styles:SHButtonSecondary>
                     </WrapPanel>
                     <WrapPanel Margin="0,8,0,0">
+                        <TextBlock Text="Brake max force in the pedals (kg)" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBox x:Name="SetupMaxForceBox" Width="60" VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                 ToolTip="Force at which the pedals report 100% brake. Set it above your hardest press; choose your real 100% with the brake panel's '100% at'." />
+                        <styles:SHButtonPrimary x:Name="SetupPedalsButton" Click="OnSetupPedalsClick"
+                                                ToolTip="Writes linear curves, no dead zone, filter off and this max force to the pedals, so all shaping happens here">Set up pedals</styles:SHButtonPrimary>
+                    </WrapPanel>
+                    <WrapPanel Margin="0,8,0,0">
                         <styles:SHButtonSecondary x:Name="RewriteTestButton" Click="OnRewriteTestClick"
                                                   ToolTip="Reads the settings, writes the same bytes back to the pedals and checks them. Changes nothing.">Rewrite test</styles:SHButtonSecondary>
                         <TextBlock VerticalAlignment="Center" Opacity="0.7" TextWrapping="Wrap" Margin="4,0,0,0"

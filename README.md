@@ -5,7 +5,7 @@ The plugin reads the pedals, applies calibration → dead zone → curve, and wr
 
 ## Rig setup (once)
 1. Install the vJoy driver (2.1.9.1). In **Configure vJoy**, enable device 1 with at least the X and Y axes.
-2. In Simsonn Manager, set throttle and brake to a **linear** curve, a 0–100 dead zone and the filter **off**. Set **Макс. сила** (max force) to the highest value it accepts, then save it to the pedals. Enter that same number as **Pedal max** in the plugin's brake panel, and pick your real max force with the **100% at** slider.
+2. Calibrate the pedals once in Simsonn Manager, then close it. On the plugin page, enter a **brake max force in the pedals** above your hardest press and click **Set up pedals**. That writes linear curves, a 0–100 dead zone, filter off and that max force to the pedals (keeping the calibration), and fills in **Pedal max** in every preset. Pick your real max force with the brake panel's **100% at** slider.
 3. Close SimHub and copy `SimsonnPedals.dll` (from the newest [release](https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x/releases/latest)) into the SimHub folder. Start SimHub and enable the plugin when it asks.
 4. In iRacing, bind throttle to **vJoy X** and brake to **vJoy Y**, then recalibrate the pedals in iRacing.
 
