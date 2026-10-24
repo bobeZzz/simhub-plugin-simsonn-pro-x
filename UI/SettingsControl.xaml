@@ -14,9 +14,14 @@
                     <StackPanel>
                         <TextBlock x:Name="DeviceStatusText" FontWeight="SemiBold" />
                         <TextBlock x:Name="VJoyStatusText" Margin="0,2,0,0" />
+                        <TextBlock x:Name="IRacingBindingText" Margin="0,2,0,0" TextWrapping="Wrap" />
                         <TextBlock x:Name="RawAxesText" Margin="0,2,0,0" Opacity="0.6" FontFamily="Consolas" />
-                        <styles:SHButtonSecondary HorizontalAlignment="Left" Margin="0,6,0,0" Click="OnReconnectClick"
-                                                  ToolTip="Close and reopen the pedals, as if the USB cable had been replugged">Reconnect pedals</styles:SHButtonSecondary>
+                        <WrapPanel Margin="0,6,0,0">
+                            <styles:SHButtonSecondary Click="OnReconnectClick"
+                                                      ToolTip="Close and reopen the pedals, as if the USB cable had been replugged">Reconnect pedals</styles:SHButtonSecondary>
+                            <styles:SHButtonSecondary Click="OnCheckBindingsClick"
+                                                      ToolTip="Reads iRacing's saved controls and checks that throttle, brake (and clutch) are bound to the plugin's vJoy axes. Rechecked automatically whenever iRacing saves its controls.">Check iRacing bindings</styles:SHButtonSecondary>
+                        </WrapPanel>
                         <TextBlock Margin="0,6,0,0" Opacity="0.7" TextWrapping="Wrap"
                                    Text="Bind throttle and brake to the vJoy device in iRacing. Set the pedals to a linear curve, 0 dead zone and no filter in Simsonn Manager so the shaping isn't applied twice." />
                     </StackPanel>

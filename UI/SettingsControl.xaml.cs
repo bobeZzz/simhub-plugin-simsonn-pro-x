@@ -101,9 +101,50 @@ namespace SimsonnPedals.UI
             if (AutoPresetText.Text != autoText) AutoPresetText.Text = autoText;
 
             RefreshModified();
+            RefreshBindingCheck(force: false);
             BrakePanel.Refresh(engine.DeviceConnected);
             ThrottlePanel.Refresh(engine.DeviceConnected);
             if (plugin.Settings.ClutchEnabled) ClutchPanel.Refresh(engine.DeviceConnected);
+        }
+
+        private DateTime nextBindingCheck;
+        private string checkedBindingsFor;
+        private bool bindingCheckRunning;
+
+        private void OnCheckBindingsClick(object sender, RoutedEventArgs e) => RefreshBindingCheck(force: true);
+
+        /// <summary>
+        /// Rechecks iRacing's bindings when its controls.cfg changes or the preset's vJoy axes do (looked at once a second).
+        /// </summary>
+        private async void RefreshBindingCheck(bool force)
+        {
+            if (bindingCheckRunning || (!force && DateTime.UtcNow < nextBindingCheck)) return;
+            nextBindingCheck = DateTime.UtcNow.AddSeconds(1);
+            var preset = plugin.ActivePreset;
+            bool clutch = plugin.Settings.ClutchEnabled;
+            string key = $"{File.GetLastWriteTimeUtc(IRacingBindings.ControlsPath).Ticks}|{File.GetLastWriteTimeUtc(IRacingBindings.CalibrationPath).Ticks}|" +
+                         $"{preset.Throttle.OutputAxis}|{preset.Brake.OutputAxis}|{(clutch ? preset.Clutch.OutputAxis.ToString() : "-")}";
+            if (!force && key == checkedBindingsFor) return;
+            checkedBindingsFor = key;
+
+            bindingCheckRunning = true;
+            try
+            {
+                int vendor = plugin.Settings.VendorId;
+                var result = await Task.Run(() => IRacingBindings.Check(preset, clutch, vendor));
+                IRacingBindingText.Text = result.Text;
+                // Same amber as the unsaved-preset warning.
+                IRacingBindingText.Foreground = result.Ok ? VJoyStatusText.Foreground : ModifiedText.Foreground;
+            }
+            catch (Exception ex)
+            {
+                IRacingBindingText.Text = "iRacing: could not read the bindings (" + ex.Message + ")";
+                IRacingBindingText.Foreground = VJoyStatusText.Foreground;
+            }
+            finally
+            {
+                bindingCheckRunning = false;
+            }
         }
 
         private void OnClutchToggleClick(object sender, RoutedEventArgs e)

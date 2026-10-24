@@ -1,7 +1,7 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.16).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.17).
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -52,12 +52,12 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | 3 | **Per-car and per-class presets**: automatic lookup car → class → game → Default; Save for <car> / <class>; a line shows the automatic choice and why. iRacing class read from the raw session info (`CarClassID`), since SimHub's CarClass is blank in single-class sessions. Rig-checked | 1.0.13–1.0.14 |
 | 4 | **Clutch panel**: "Clutch pedal connected" toggle (off by default); full panel (calibration, dead zone, curve, bind sweep) on vJoy Z; reads Z on 2.0.x, Rz on 2.1.x. Shaped in the plugin only: the clutch axis in the pedals is not touched by Set up / Calibrate pedals. Rig check pending | 1.0.15 |
 | – | **Brake stuck after SimHub exits**: exit guard, a small exe embedded in the DLL and started when vJoy is acquired; it waits for SimHub to exit (any way, incl. crash and Task Manager), then acquires the vJoy device and sets every axis to 0. Log: `%LocalAppData%\SimsonnPedals\exit-guard.log`. Tested on the dev PC without vJoy (one guard per SimHub, sees the exit); rig check pending | 1.0.16 |
+| 5 | **iRacing binding check**: reads `DocumentsiRacingntrols.cfg` (binary: name, int32 0x1F, bound, axis index, int32, DirectInput instance GUID) and `joyCalib.yaml` (device and axis names); warns when throttle / brake / clutch are unbound, bound to the pedals directly, to another device, or to a different vJoy axis than the preset sends. Rechecked when iRacing saves its controls. Format checked on the dev PC's 2024 iRacing files; rig check pending (vJoy axis names assumed "X Axis", "Y Rotation"…, only compared when they match) | 1.0.17 |
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-1. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
-2. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
-3. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
+1. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
+2. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
 
 ## Maybe / parked
 - **Live brake max force** (report 6 `damping_max`, sent by the Manager while the spinner moves). If it applies without
