@@ -77,8 +77,13 @@ namespace SimsonnPedals
             this.AttachDelegate("Clutch.Raw", () => Engine.Clutch.Raw);
             this.AttachDelegate("Clutch.Position", () => Math.Round(Engine.Clutch.Position * 100, 1));
             this.AttachDelegate("Clutch.Output", () => Math.Round(Engine.Clutch.Output * 100, 1));
+            this.AttachDelegate("Throttle.Sent", () => Math.Round(Engine.ThrottleSent * 100, 1));
+            this.AttachDelegate("Throttle.Override", () => Engine.Override.ToString());
 
             this.AddAction("NextPreset", (pm, input) => CyclePreset());
+            // Map these to the shift paddles in Controls and events; the game gets the paddles as usual.
+            this.AddAction("Upshift", (pm, input) => Engine.Upshift());
+            this.AddAction("Downshift", (pm, input) => Engine.Downshift());
         }
 
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
@@ -200,6 +205,7 @@ namespace SimsonnPedals
             preset.Throttle.PropertyChanged += OnPresetEdited;
             preset.Brake.PropertyChanged += OnPresetEdited;
             preset.Clutch.PropertyChanged += OnPresetEdited;
+            preset.Assist.PropertyChanged += OnPresetEdited;
         }
 
         private void Untrack(PedalPreset preset)
@@ -207,6 +213,7 @@ namespace SimsonnPedals
             preset.Throttle.PropertyChanged -= OnPresetEdited;
             preset.Brake.PropertyChanged -= OnPresetEdited;
             preset.Clutch.PropertyChanged -= OnPresetEdited;
+            preset.Assist.PropertyChanged -= OnPresetEdited;
         }
 
         private void OnPresetEdited(object sender, PropertyChangedEventArgs e)

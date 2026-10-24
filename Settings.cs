@@ -124,6 +124,40 @@ namespace SimsonnPedals
         private static int Clamp(int v, int min, int max) => v < min ? min : v > max ? max : v;
     }
 
+    /// <summary>
+    /// Throttle overrides applied after shaping: a cut on upshift and a blip on downshift (from the shift paddles, through
+    /// SimHub actions), and a cut while the brake is pressed past a level. Per preset, since cars need different amounts.
+    /// </summary>
+    public class ShiftAssist : Observable
+    {
+        private bool upshiftCut;
+        private double upshiftCutMs = 60;
+        private bool downshiftBlip;
+        private double blipPercent = 35;
+        private double blipMs = 120;
+        private bool brakeCut;
+        private double brakeCutPercent = 30;
+
+        public bool UpshiftCut { get => upshiftCut; set => Set(ref upshiftCut, value); }
+
+        /// <summary>How long the throttle is held at 0 after an upshift press.</summary>
+        public double UpshiftCutMs { get => upshiftCutMs; set => Set(ref upshiftCutMs, Math.Max(10, Math.Min(500, value))); }
+
+        public bool DownshiftBlip { get => downshiftBlip; set => Set(ref downshiftBlip, value); }
+
+        /// <summary>Throttle output during a blip (the pedal still wins if pressed further).</summary>
+        public double BlipPercent { get => blipPercent; set => Set(ref blipPercent, Math.Max(1, Math.Min(100, value))); }
+
+        public double BlipMs { get => blipMs; set => Set(ref blipMs, Math.Max(10, Math.Min(500, value))); }
+
+        public bool BrakeCut { get => brakeCut; set => Set(ref brakeCut, value); }
+
+        /// <summary>Brake output (%) from which the throttle is cut to 0.</summary>
+        public double BrakeCutPercent { get => brakeCutPercent; set => Set(ref brakeCutPercent, Math.Max(1, Math.Min(100, value))); }
+
+        public ShiftAssist Clone() => JsonConvert.DeserializeObject<ShiftAssist>(JsonConvert.SerializeObject(this));
+    }
+
     public class PedalPreset
     {
         public PedalConfig Throttle { get; set; }
@@ -131,6 +165,8 @@ namespace SimsonnPedals
 
         /// <summary>Used only when <see cref="PluginSettings.ClutchEnabled"/> is on.</summary>
         public PedalConfig Clutch { get; set; }
+
+        public ShiftAssist Assist { get; set; }
 
         /// <summary>
         /// Pro X Ultra reports throttle on X, brake on Y and clutch on Z; they go to the same vJoy axes.
@@ -141,9 +177,13 @@ namespace SimsonnPedals
             Throttle = new PedalConfig { SourceAxis = InputAxis.X, OutputAxis = VJoyAxis.X },
             Brake = new PedalConfig { SourceAxis = InputAxis.Y, OutputAxis = VJoyAxis.Y, FirmwareMaxForceKg = 60, MaxForceKg = 60 },
             Clutch = new PedalConfig { SourceAxis = InputAxis.Z, OutputAxis = VJoyAxis.Z },
+            Assist = new ShiftAssist(),
         };
 
-        public PedalPreset Clone() => new PedalPreset { Throttle = Throttle.Clone(), Brake = Brake.Clone(), Clutch = Clutch.Clone() };
+        public PedalPreset Clone() => new PedalPreset
+        {
+            Throttle = Throttle.Clone(), Brake = Brake.Clone(), Clutch = Clutch.Clone(), Assist = Assist.Clone(),
+        };
 
         public bool SameAs(PedalPreset other) =>
             other != null && JsonConvert.SerializeObject(this) == JsonConvert.SerializeObject(other);
@@ -159,6 +199,7 @@ namespace SimsonnPedals
                 Clutch = defaults.Clutch;
                 if (Throttle.SourceAxis == InputAxis.RotationX) Clutch.SourceAxis = InputAxis.RotationZ;
             }
+            Assist = Assist ?? defaults.Assist;
         }
     }
 

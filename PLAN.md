@@ -1,7 +1,7 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.18).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.19).
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -56,10 +56,12 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | – | **Brake stuck after SimHub exits**: exit guard, a small exe embedded in the DLL and started when vJoy is acquired; it waits for SimHub to exit (any way, incl. crash and Task Manager), then acquires the vJoy device and sets every axis to 0. Log: `%LocalAppData%\SimsonnPedals\exit-guard.log`. Tested on the dev PC without vJoy (one guard per SimHub, sees the exit); rig check pending | 1.0.16 |
 | 5 | **iRacing binding check**: reads `Documents\iRacing\controls.cfg` (binary: name, int32 0x1F, bound, axis index, int32, DirectInput instance GUID) and `joyCalib.yaml` (device and axis names); warns when throttle / brake / clutch are unbound, bound to the pedals directly, to another device, or to a different vJoy axis than the preset sends. Rechecked when iRacing saves its controls. Format checked on the dev PC's 2024 iRacing files; rig check pending (vJoy axis names assumed "X Axis", "Y Rotation"…, only compared when they match) | 1.0.17 |
 | 6 | **Exact curves**: the firmware (2.1.1, disassembled) maps raw linearly between the output ends (which hold the dead zones), then joins the 11 curve points with straight lines, the same as the plugin; the Manager only *draws* it as a spline. **Import Manager preset… / Import from pedals** convert the Manager's dead zones, curve points and brake 100 % force into the active preset exactly (also covers F3). Offline: within 0.004 % of the simulated firmware on a rig dump. See [research/curves.md](research/curves.md). Rig check pending | 1.0.18 |
+| 7 | **Throttle cut and blip**, per preset: SimHub actions `SimsonnPedalsPlugin.Upshift` / `Downshift` (mapped to the paddles in Controls and events) cut the throttle to 0 for a set time or blip it to a set level (the pedal wins if pressed further); optional cut while brake output ≥ a level (2 % hysteresis; a blip still gets through). Applied after shaping, not during a throttle bind sweep. Properties `Throttle.Sent`, `Throttle.Override`. Logic checked offline; rig check pending | 1.0.19 |
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-1. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
+Nothing planned: all phases are released. Next is working through [TESTING.md](TESTING.md) on the rig, then fixes from
+it. Ideas wait under Maybe / parked.
 
 ## Maybe / parked
 - **Live brake max force** (report 6 `damping_max`, sent by the Manager while the spinner moves). If it applies without

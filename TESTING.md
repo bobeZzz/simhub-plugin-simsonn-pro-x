@@ -40,6 +40,19 @@ Every new release adds its checks here.
 - [ ] **Import from pedals** reads the pedals (about 2 s) and fills the same way. After Set up pedals it should give
       linear curves and no dead zones.
 
+### 1.0.19 – Throttle cut and blip
+- [ ] In SimHub **Controls and events**, map `SimsonnPedalsPlugin.Upshift` and `SimsonnPedalsPlugin.Downshift` to the
+      paddles. On the plugin page, "Paddle presses seen" counts up with each paddle.
+- [ ] Tick **Cut throttle on upshift** (60 ms). Flat-shift up in a car without its own cut: the shift goes through
+      clean with the throttle held. Try 40–120 ms to find what the car needs.
+- [ ] Tick **Blip throttle on downshift** (35 %, 120 ms). Downshift while braking: revs rise briefly, no lockup or
+      lurch. Tune level and time per car, Save for that car.
+- [ ] Tick **Cut throttle when braking** (30 %). Press brake past 30 % with throttle held: "brake cut", throttle 0;
+      back off below about 28 %: throttle returns. A downshift blip still works while braking.
+- [ ] **Test upshift / Test downshift** buttons flash "upshift cut" / "blip" next to them.
+- [ ] Paddle-to-cut delay feels fine (SimHub reads the paddles, then the plugin). If the cut lands late, say so.
+- [ ] Old presets load with all three off and aren't marked unsaved.
+
 ## Older, still open
 - [ ] **Save / Revert** (1.0.5): edit, Save, edit again, Revert returns to the saved values; Save as moves the edits to
       the new preset.

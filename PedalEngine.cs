@@ -13,6 +13,9 @@ namespace SimsonnPedals
     /// </summary>
     public enum SweepPedal { None, Throttle, Brake, Clutch }
 
+    /// <summary>What is overriding the throttle right now (see <see cref="ShiftAssist"/>).</summary>
+    public enum ThrottleOverride { None, ShiftCut, Blip, BrakeCut }
+
     public sealed class PedalEngine : IDisposable
     {
         private const double ReconnectIntervalMs = 1000;
@@ -29,6 +32,16 @@ namespace SimsonnPedals
         private volatile int sweepRequest;
         private SweepPedal sweepActive;
         private double sweepStartMs;
+
+        // Paddle presses older than this when the loop sees them (pedals were away) are dropped.
+        private const double ShiftRequestMaxAgeMs = 100;
+        // The brake cut lets go a little below its level, so a brake resting on the level doesn't flicker the throttle.
+        private const double BrakeCutHysteresis = 0.02;
+
+        private readonly Stopwatch clock = Stopwatch.StartNew();
+        private long upshiftAtTicks, downshiftAtTicks;
+        private double cutEndMs = double.NegativeInfinity, blipEndMs = double.NegativeInfinity;
+        private bool brakeCutOn;
 
         private readonly Func<PluginSettings> settings;
         private readonly AutoResetEvent reportSignal = new AutoResetEvent(false);
@@ -78,6 +91,32 @@ namespace SimsonnPedals
         /// <summary>Closes and reopens the pedals on the input thread, as if they had been replugged.</summary>
         public void RequestReconnect() => reconnectRequest = true;
 
+        /// <summary>Upshift paddle pressed (any thread): cuts the throttle if the preset asks for it.</summary>
+        public void Upshift()
+        {
+            Interlocked.Exchange(ref upshiftAtTicks, Math.Max(1, clock.ElapsedTicks));
+            Interlocked.Increment(ref upshiftCount);
+        }
+
+        /// <summary>Downshift paddle pressed (any thread): blips the throttle if the preset asks for it.</summary>
+        public void Downshift()
+        {
+            Interlocked.Exchange(ref downshiftAtTicks, Math.Max(1, clock.ElapsedTicks));
+            Interlocked.Increment(ref downshiftCount);
+        }
+
+        private int upshiftCount, downshiftCount;
+
+        /// <summary>Paddle presses seen this session, so the page can show the buttons are mapped.</summary>
+        public int UpshiftCount => upshiftCount;
+        public int DownshiftCount => downshiftCount;
+
+        /// <summary>What overrides the throttle at the moment.</summary>
+        public ThrottleOverride Override { get; private set; }
+
+        /// <summary>Throttle as sent to vJoy, after any override (0–1).</summary>
+        public double ThrottleSent { get; private set; }
+
         public void Start()
         {
             if (thread != null) return;
@@ -98,7 +137,6 @@ namespace SimsonnPedals
 
         private void Run()
         {
-            var clock = Stopwatch.StartNew();
             Joystick joystick = null;
             Guid instanceGuid = Guid.Empty;
             DirectInput directInput = null;
@@ -242,6 +280,30 @@ namespace SimsonnPedals
                             else if (clutchOn) clutch = sweep;
                         }
 
+                        var assist = preset.Assist;
+                        double upAt = TakeShiftRequest(ref upshiftAtTicks, now), downAt = TakeShiftRequest(ref downshiftAtTicks, now);
+                        if (!double.IsNaN(upAt) && assist.UpshiftCut)
+                        {
+                            cutEndMs = upAt + assist.UpshiftCutMs;
+                            blipEndMs = double.NegativeInfinity;
+                        }
+                        if (!double.IsNaN(downAt) && assist.DownshiftBlip)
+                        {
+                            blipEndMs = downAt + assist.BlipMs;
+                            cutEndMs = double.NegativeInfinity;
+                        }
+                        // A throttle sweep is for binding: leave it alone.
+                        if (sweepActive == SweepPedal.Throttle)
+                        {
+                            Override = ThrottleOverride.None;
+                        }
+                        else
+                        {
+                            throttle = ApplyAssist(assist, throttle, brake, now, cutEndMs, blipEndMs, ref brakeCutOn, out var overrideNow);
+                            Override = overrideNow;
+                        }
+                        ThrottleSent = throttle;
+
                         // A switched-off clutch leaves its vJoy axis to ZeroUnused, which parks it at 0.
                         vjoy.ZeroUnused(preset.Throttle.OutputAxis, preset.Brake.OutputAxis, clutchOn ? preset.Clutch.OutputAxis : preset.Throttle.OutputAxis);
                         vjoy.SetAxis(preset.Throttle.OutputAxis, throttle);
@@ -304,6 +366,52 @@ namespace SimsonnPedals
             DeviceName = device.ProductName.Trim();
             SimHub.Logging.Current.Info($"[SimsonnPedals] Connected to {DeviceName}");
             return joystick;
+        }
+
+        /// <summary>Time (ms on <see cref="clock"/>) of a paddle press not yet handled, or NaN if none or too old.</summary>
+        private double TakeShiftRequest(ref long atTicks, double now)
+        {
+            long ticks = Interlocked.Exchange(ref atTicks, 0);
+            if (ticks == 0) return double.NaN;
+            double at = ticks * 1000.0 / Stopwatch.Frequency;
+            return now - at <= ShiftRequestMaxAgeMs ? at : double.NaN;
+        }
+
+        /// <summary>
+        /// Throttle (0–1) after the preset's overrides. Upshift cut wins over everything; a blip raises the throttle to
+        /// its level even while braking (that's when downshifts happen); otherwise the brake cut holds it at 0 while the
+        /// brake output is at or past its level.
+        /// </summary>
+        public static double ApplyAssist(ShiftAssist assist, double throttle, double brake, double now, double cutEndMs,
+            double blipEndMs, ref bool brakeCutOn, out ThrottleOverride state)
+        {
+            if (assist.BrakeCut)
+            {
+                double level = assist.BrakeCutPercent / 100;
+                brakeCutOn = brake >= level || (brakeCutOn && brake > level - Math.Min(BrakeCutHysteresis, level / 2));
+            }
+            else
+            {
+                brakeCutOn = false;
+            }
+
+            if (now < cutEndMs)
+            {
+                state = ThrottleOverride.ShiftCut;
+                return 0;
+            }
+            if (now < blipEndMs)
+            {
+                state = ThrottleOverride.Blip;
+                return Math.Max(throttle, assist.BlipPercent / 100);
+            }
+            if (brakeCutOn)
+            {
+                state = ThrottleOverride.BrakeCut;
+                return 0;
+            }
+            state = ThrottleOverride.None;
+            return throttle;
         }
 
         /// <summary>Sweep output for the elapsed time, or NaN once it is over.</summary>

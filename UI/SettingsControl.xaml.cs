@@ -70,6 +70,7 @@ namespace SimsonnPedals.UI
             BrakePanel.Config = preset.Brake;
             ThrottlePanel.Config = preset.Throttle;
             ClutchPanel.Config = preset.Clutch;
+            AssistSection.DataContext = preset.Assist;
 
             updatingPresetList = true;
             PresetCombo.ItemsSource = plugin.Settings.Presets.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
@@ -105,7 +106,43 @@ namespace SimsonnPedals.UI
             BrakePanel.Refresh(engine.DeviceConnected);
             ThrottlePanel.Refresh(engine.DeviceConnected);
             if (plugin.Settings.ClutchEnabled) ClutchPanel.Refresh(engine.DeviceConnected);
+            RefreshAssist(engine);
         }
+
+        private ThrottleOverride lastOverride;
+        private DateTime lastOverrideUntil;
+
+        private void RefreshAssist(PedalEngine engine)
+        {
+            string paddles = $"Paddle presses seen: {engine.UpshiftCount} up, {engine.DownshiftCount} down";
+            if (PaddleStatus.Text != paddles) PaddleStatus.Text = paddles;
+
+            // A cut or blip lasts a few frames; keep its name up for a second so it can be seen.
+            var state = engine.Override;
+            if (state != ThrottleOverride.None)
+            {
+                lastOverride = state;
+                lastOverrideUntil = DateTime.UtcNow.AddSeconds(1);
+            }
+            string label = DateTime.UtcNow < lastOverrideUntil ? OverrideName(lastOverride) : "";
+            string text = $"Throttle sent {engine.ThrottleSent * 100,5:0.0} %  {label}";
+            if (ThrottleSentText.Text != text) ThrottleSentText.Text = text;
+        }
+
+        private static string OverrideName(ThrottleOverride state)
+        {
+            switch (state)
+            {
+                case ThrottleOverride.ShiftCut: return "upshift cut";
+                case ThrottleOverride.Blip: return "blip";
+                case ThrottleOverride.BrakeCut: return "brake cut";
+                default: return "";
+            }
+        }
+
+        private void OnTestUpshiftClick(object sender, RoutedEventArgs e) => plugin.Engine.Upshift();
+
+        private void OnTestDownshiftClick(object sender, RoutedEventArgs e) => plugin.Engine.Downshift();
 
         private void OnImportManagerFileClick(object sender, RoutedEventArgs e)
         {
