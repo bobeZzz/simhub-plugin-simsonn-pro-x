@@ -104,6 +104,22 @@
                                    Text="Tests writing to the pedals by saving their own settings back unchanged. Close Simsonn Manager first." />
                     </WrapPanel>
                     <TextBlock x:Name="PedalSettingsStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
+
+                    <TextBlock Margin="0,14,0,0" FontWeight="SemiBold" Text="Direct mode tests (no vJoy, phase D1)" />
+                    <TextBlock Margin="0,2,0,0" Opacity="0.7" TextWrapping="Wrap"
+                               Text="Check whether the pedals take new settings live, without dropping off USB. Each test changes the pedals' settings for a few seconds and puts them back; follow the line below while it runs. Close Simsonn Manager first. Results go to the dump folder (Open folder)." />
+                    <WrapPanel Margin="0,6,0,0">
+                        <styles:SHButtonSecondary x:Name="LiveWriteTestButton" Click="OnLiveWriteTestClick"
+                                                  ToolTip="Hold the throttle halfway. Writes settings where the throttle reaches 100 % at half travel, then the original back. Shows whether the change applied live and whether the pedals stayed connected.">Live write test</styles:SHButtonSecondary>
+                        <styles:SHButtonSecondary x:Name="MaxForceTestButton" Click="OnMaxForceTestClick"
+                                                  ToolTip="Press the brake lightly and hold. Halves the brake's max force with the Manager's live command, then puts it back. Shows whether it applied live and was saved.">Live max force test</styles:SHButtonSecondary>
+                        <styles:SHButtonSecondary x:Name="BrakeCutTestButton" Click="OnBrakeCutTestClick"
+                                                  ToolTip="Switches the pedals' own throttle cut on for 10 s at this brake level (up to 50 %), then back as it was. Hold the throttle and press the brake past the level a few times.">Firmware brake cut test</styles:SHButtonSecondary>
+                        <TextBlock Text="at" VerticalAlignment="Center" Margin="4,0,4,0" />
+                        <TextBox x:Name="BrakeCutTestBox" Width="40" Text="20" VerticalContentAlignment="Center" />
+                        <TextBlock Text="% brake" VerticalAlignment="Center" Margin="4,0,0,0" />
+                    </WrapPanel>
+                    <TextBlock x:Name="DirectTestStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
                 </StackPanel>
             </styles:SHSection>
 

@@ -1,7 +1,7 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.19).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.20).
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -24,7 +24,7 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 - Output goes through **vJoy**; the game binds to vJoy, not to the pedals. Direct mode (planned, D1–D6) is a second
   output mode beside it, not a replacement.
 - Shaping (dead zone, curve, max force scaling) happens **live in the plugin**. The pedals are set up once to neutral
-  (linear, 0–100, filter off, high max force) with **Set up pedals**. Writes to the pedals restart them (USB drops),
+  (linear, 0–100, filter off, high max force) with **Set up pedals**. Writes to the pedals write flash (and were thought to restart them; the firmware code says they reload live, D1),
   so they are never done per game or per car.
 - **No smoothing filter** in the plugin (removed in 1.0.2).
 - Presets: per game, auto-applied; later per car (lookup car → class → game → Default).
@@ -69,9 +69,10 @@ showed the firmware applies dead zones and curves exactly as the plugin does (ou
 so a preset can be written without changing how it feels. vJoy mode stays as it is; the user picks the mode.
 
 **Gains:** no vJoy driver, exit guard or vJoy binding; the pedals work with SimHub closed; nothing sits between the
-pedals and the game. **Costs:** every block write restarts the pedals (USB drop of about 1–2 s) and writes flash, so
-presets can't switch freely while driving; shift cut and blip need vJoy and aren't available. Brake throttle cut maps
-onto the firmware's own (report 6 `brakeCutoff`, live, no restart).
+pedals and the game. **Costs:** every change erases and writes flash, so writes must be skipped when nothing changed
+and debounced while editing; shift cut and blip need vJoy and aren't available; the firmware's brake throttle cut tops
+out at 50 % brake. **D1 firmware finding:** a block write does *not* restart the pedals: 2.0.8 and 2.1.1 save to flash
+and reload the settings live (see [research/direct-mode.md](research/direct-mode.md)). The rig tests confirm it.
 
 | Plugin feature | In direct mode |
 |---|---|
@@ -82,13 +83,13 @@ onto the firmware's own (report 6 `brakeCutoff`, live, no restart).
 | Shift cut / blip, bind sweep, exit guard | Not available / not needed |
 | iRacing binding check | Checks the bindings point at the pedals instead of vJoy |
 
-1. **D1 – Check the risky parts on the rig (no code beyond test buttons).**
-   - Is iRacing still bound and working after the pedals restart mid-session (on track, and in the garage)? This
+1. **D1 – Check the risky parts.** Firmware part done; rig tests in 1.0.20 (Direct mode tests, see TESTING.md).
+   - Firmware (2.0.8 and 2.1.1): block writes save to flash and reload live with no reset; `damping_max` changes the
+     brake's raw max and high end live and saves them; `brakeCutoff` is live, capped at 50 %. No RAM-only apply exists:
+     every change writes flash.
+   - Rig, pending: **Live write test** (applies live? pedals stay connected?), **Live max force test**, **Firmware
+     brake cut test**. If the pedals do drop off, also check iRacing keeps working after a write mid-session; that
      decides D4.
-   - Is `brakeCutoff` applied live and kept over a replug (expected from the Manager code)?
-   - Does `damping_max` apply without a restart? If so, brake "100% at" can change live too.
-   - Firmware 2.1.1 disassembly: is there any way to apply the block without the save-and-restart (a RAM-only
-     apply)? Likely not (FreeJoy saves to flash and resets), but worth a look since it would remove the main cost.
 2. **D2 – Preset → settings block (`PedalExport`).** The inverse of `ManagerImport`: start from the block read from
    the pedals, change only the shaping fields of throttle, brake (and clutch), keep calibration, sensors, buttons and
    everything else byte for byte. Offline checks: export → import gives the same preset, and the simulated firmware
@@ -98,9 +99,9 @@ onto the firmware's own (report 6 `brakeCutoff`, live, no restart).
    when nothing changes (no needless restart or flash write). Writes happen on **Write to pedals**, on Save, and on an
    automatic preset switch while no game is running. Status line: which preset the pedals hold, and since when.
    Leaving direct mode offers Set up pedals, so vJoy mode gets neutral pedals again.
-4. **D4 – Per car while a game runs**, depending on D1. If iRacing survives the restart: write on car change only
-   while stopped in the pits or garage, never on track. If not: switch per game only, and say per-car presets need
-   vJoy mode.
+4. **D4 – Per car while a game runs**, depending on D1. If writes apply live without a drop (as the firmware code
+   says): write on car change, preferably while stopped (pits or garage) so the feel doesn't change mid-corner. If
+   the pedals drop off and iRacing doesn't cope: switch per game only, and say per-car presets need vJoy mode.
 5. **D5 – Live edits.** Dragging a curve point in direct mode would mean one restart per change: edits stay in the
    plugin (bars show the result) and go to the pedals on Save / Write to pedals, with an "Edits not in the pedals
    yet" marker. Brake cut (and max force, if D1 allows) go live.
@@ -121,7 +122,7 @@ that's years of normal use. Worth a counter in the log anyway.
 - Firmware 0x2080 (FreeJoy-derived). Settings block 1116 bytes = 18 packets × 62. Axis i at 0x40 + 52·i;
   0 throttle, 1 brake, 2 clutch.
 - Read: `[3, n]` → `[3, n, 62 bytes]`. Write: `[4, 0]` → `[4, 1]`, then `[4, n, 62 bytes]` → `[4, n+1]`; after the last
-  packet the pedals save and restart (no answer). `[4, 0xFE]` = version mismatch, nothing saved.
+  packet the pedals save and reload live, with no answer (firmware code, D1; not a restart). `[4, 0xFE]` = version mismatch, nothing saved.
 - Right after Simsonn Manager saves, the pedals may not answer the first read; the reader retries 4 times.
 - Report 6 = command channel: `[6, "name", payload]`, replies `[6, "OK"…]` / `[6, "BCOK"…]`. Report 2 = params: host
   sends `[2, 0]` (repeat < 5 s), device sends raw sensor values (channel i int16 at packet 0 byte 6 + 2i; to verify).

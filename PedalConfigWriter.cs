@@ -22,7 +22,8 @@ namespace SimsonnPedals
     /// Writes a settings block to the pedals with FreeJoy's CONFIG_OUT exchange: the host sends [4, 0] and the
     /// pedals answer [4, 1], asking for packet 1; each packet [4, n, 62 bytes] is answered with [4, n + 1].
     /// Packets are only buffered until the last one arrives; the firmware then checks the version, saves to flash
-    /// and restarts (USB drops for 1-2 s), or answers [4, 0xFE] and saves nothing on a version mismatch.
+    /// and reloads the settings live without answering (2.0.8 and 2.1.1 code, research/direct-mode.md; earlier notes
+    /// assumed a restart), or answers [4, 0xFE] and saves nothing on a version mismatch.
     /// So stopping at any point before the last packet leaves the stored settings untouched.
     /// </summary>
     public static class PedalConfigWriter

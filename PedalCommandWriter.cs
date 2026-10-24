@@ -15,13 +15,82 @@ namespace SimsonnPedals
 
     /// <summary>
     /// Live settings changes over the pedals' report 6 command channel (research/manager-protocol.md). These don't go
-    /// through the settings block, so the pedals don't restart. The only change allowed here is switching the firmware
-    /// throttle cut off: the plugin does throttle cut itself, and the firmware's would zero the throttle behind its back.
+    /// through the settings block. Only two commands may be sent: <c>brakeCutoff</c> (the firmware's throttle cut; vJoy
+    /// mode keeps it off, since it would zero the throttle behind the plugin's back) and <c>damping_max</c> (the brake's
+    /// max force: raw max and output high end, which the firmware saves and reloads live, see research/direct-mode.md).
     /// </summary>
     public static class PedalCommandWriter
     {
         private const byte ReportIdCommand = 6;
         private const string BrakeCutoff = "brakeCutoff";
+        private const string DampingMax = "damping_max";
+
+        /// <summary>The firmware caps the throttle cut threshold at 50 % (500 tenths).</summary>
+        public const int MaxBrakeCutoffTenths = 500;
+
+        /// <summary>Sets the firmware throttle cut and reads it back. Returns the state read back, or null.</summary>
+        public static PedalStatusReader.BrakeCutoff? SetBrakeCutoff(int vendorId, int productId, bool enabled, int thresholdTenths, StringBuilder report)
+        {
+            if (thresholdTenths < 1 || thresholdTenths > MaxBrakeCutoffTenths)
+                throw new ArgumentOutOfRangeException(nameof(thresholdTenths), "The firmware throttle cut works from 0.1 to 50 % brake.");
+            return WithCommandStream(vendorId, productId, report, (stream, request, reply) =>
+            {
+                report.AppendLine($"  {BrakeCutoff} (enabled {(enabled ? 1 : 0)}, threshold {thresholdTenths}):");
+                Prepare(request, BrakeCutoff);
+                int payload = 1 + BrakeCutoff.Length;
+                request[payload] = (byte)(enabled ? 1 : 0);
+                request[payload + 1] = (byte)(thresholdTenths & 0xFF);
+                request[payload + 2] = (byte)(thresholdTenths >> 8);
+                Send(stream, request);
+                PedalStatusReader.WaitForCommandReply(stream, reply, report);
+                return PedalStatusReader.ReadBrakeCutoff(stream, request, reply, report);
+            });
+        }
+
+        /// <summary>
+        /// Sends <c>damping_max</c>: the brake's raw max (+8) and output high end (+4); the firmware also sets the centre to
+        /// the middle of the output ends. Returns false if the settings interface couldn't be used.
+        /// </summary>
+        public static bool SetDampingMax(int vendorId, int productId, int rawMax, int outHigh, StringBuilder report)
+        {
+            if (rawMax < short.MinValue || rawMax > short.MaxValue || outHigh < short.MinValue || outHigh > short.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(rawMax), "Brake values must fit in 16 bits.");
+            return WithCommandStream<bool>(vendorId, productId, report, (stream, request, reply) =>
+            {
+                report.AppendLine($"  {DampingMax} (raw max {rawMax}, output high end {outHigh}):");
+                Prepare(request, DampingMax);
+                int payload = 1 + DampingMax.Length;
+                BitConverter.GetBytes((short)rawMax).CopyTo(request, payload);
+                BitConverter.GetBytes((short)outHigh).CopyTo(request, payload + 2);
+                Send(stream, request);
+                // 2.1.1 answers "DMOK"; 2.0.8 sends nothing back.
+                PedalStatusReader.WaitForCommandReply(stream, reply, report);
+                return true;
+            }) ?? false;
+        }
+
+        private static T? WithCommandStream<T>(int vendorId, int productId, StringBuilder report, Func<HidStream, byte[], byte[], T?> action) where T : struct
+        {
+            var devices = DeviceList.Local.GetHidDevices(vendorId, productId).ToList();
+            var device = PedalConfigReader.FindInterfaces(devices, ReportIdCommand, report).FirstOrDefault();
+            if (device == null || !device.TryOpen(out HidStream stream))
+            {
+                report.AppendLine("  The settings interface wasn't found or couldn't be opened.");
+                return null;
+            }
+            using (stream)
+            {
+                stream.ReadTimeout = 100;
+                return action(stream, new byte[device.GetMaxOutputReportLength()], new byte[device.GetMaxInputReportLength()]);
+            }
+        }
+
+        private static void Prepare(byte[] request, string command)
+        {
+            Array.Clear(request, 0, request.Length);
+            request[0] = ReportIdCommand;
+            Encoding.ASCII.GetBytes(command, 0, command.Length, request, 1);
+        }
 
         /// <summary>Switches the firmware throttle cut off (the threshold is kept) and reads it back.</summary>
         public static PedalCommandResult SwitchThrottleCutOff(int vendorId, int productId)
@@ -48,9 +117,7 @@ namespace SimsonnPedals
                     return Finish(true, before.Value.ToString(), report);
 
                 report.AppendLine($"  {BrakeCutoff} (enabled 0, threshold {before.Value.ThresholdTenths}):");
-                Array.Clear(request, 0, request.Length);
-                request[0] = ReportIdCommand;
-                Encoding.ASCII.GetBytes(BrakeCutoff, 0, BrakeCutoff.Length, request, 1);
+                Prepare(request, BrakeCutoff);
                 int payload = 1 + BrakeCutoff.Length;
                 request[payload] = 0;
                 request[payload + 1] = (byte)(before.Value.ThresholdTenths & 0xFF);
@@ -67,15 +134,27 @@ namespace SimsonnPedals
             }
         }
 
-        /// <summary>The single write path: only "brakeCutoff" with enabled = 0 may be sent.</summary>
+        /// <summary>
+        /// The single write path: only "brakeCutoff" (enabled 0/1, threshold 1–500) or "damping_max" (two int16) may be
+        /// sent, with nothing after their payload.
+        /// </summary>
         private static void Send(HidStream stream, byte[] request)
         {
-            int payload = 1 + BrakeCutoff.Length;
-            bool allowed = request[0] == ReportIdCommand &&
-                           Encoding.ASCII.GetString(request, 1, BrakeCutoff.Length) == BrakeCutoff &&
-                           request[payload] == 0 &&
-                           request.Skip(payload + 3).All(b => b == 0);
-            if (!allowed) throw new InvalidOperationException("Only switching the firmware throttle cut off may be sent.");
+            bool Is(string command) => request[0] == ReportIdCommand &&
+                                       Encoding.ASCII.GetString(request, 1, command.Length) == command;
+            bool allowed;
+            if (Is(BrakeCutoff))
+            {
+                int payload = 1 + BrakeCutoff.Length;
+                int threshold = BitConverter.ToUInt16(request, payload + 1);
+                allowed = request[payload] <= 1 && threshold >= 1 && threshold <= MaxBrakeCutoffTenths &&
+                          request.Skip(payload + 3).All(b => b == 0);
+            }
+            else if (Is(DampingMax))
+                allowed = request.Skip(1 + DampingMax.Length + 4).All(b => b == 0);
+            else
+                allowed = false;
+            if (!allowed) throw new InvalidOperationException("Only the firmware throttle cut and brake max force may be sent.");
             stream.Write(request);
         }
 

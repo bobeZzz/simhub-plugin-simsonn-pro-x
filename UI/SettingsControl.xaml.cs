@@ -508,7 +508,8 @@ namespace SimsonnPedals.UI
 
         private void SetPedalButtonsEnabled(bool enabled) =>
             ReadPedalSettingsButton.IsEnabled = RewriteTestButton.IsEnabled = SetupPedalsButton.IsEnabled =
-                CalibratePedalsButton.IsEnabled = enabled;
+                CalibratePedalsButton.IsEnabled = LiveWriteTestButton.IsEnabled = MaxForceTestButton.IsEnabled =
+                    BrakeCutTestButton.IsEnabled = enabled;
 
         // Calibration of the pedals themselves: live raw values from the params report, rest → press → Finish.
         private PedalRawMonitor rawMonitor;
@@ -719,6 +720,59 @@ namespace SimsonnPedals.UI
             catch (Exception ex)
             {
                 PedalSettingsStatus.Text = "Failed: " + ex.Message;
+            }
+            finally
+            {
+                SetPedalButtonsEnabled(true);
+            }
+        }
+
+        private void OnLiveWriteTestClick(object sender, RoutedEventArgs e) => RunDirectTest(
+            "Live write test: hold the throttle about halfway for the whole test (about 15 s). The pedals get settings where the throttle reaches 100 % at half travel, then their own settings back.",
+            (engine, vid, pid, progress) => DirectModeTests.LiveWrite(engine, vid, pid, progress));
+
+        private void OnMaxForceTestClick(object sender, RoutedEventArgs e) => RunDirectTest(
+            "Live max force test: press the brake lightly (about 20–40 %) and hold it steady for about 10 s. The brake's max force is halved for a few seconds, then put back.",
+            (engine, vid, pid, progress) => DirectModeTests.LiveMaxForce(engine, vid, pid, progress));
+
+        private void OnBrakeCutTestClick(object sender, RoutedEventArgs e)
+        {
+            if (!double.TryParse(BrakeCutTestBox.Text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out double percent) &&
+                !double.TryParse(BrakeCutTestBox.Text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out percent) ||
+                percent < 1 || percent > PedalCommandWriter.MaxBrakeCutoffTenths / 10.0)
+            {
+                DirectTestStatus.Text = "Enter a brake level from 1 to 50 %.";
+                return;
+            }
+            int tenths = (int)Math.Round(percent * 10);
+            RunDirectTest(
+                $"Firmware brake cut test: the pedals' own throttle cut is switched on at {percent:0.#} % brake for 10 s. Hold the throttle down and press the brake past that level and back a few times. Afterwards it's set back as it was.",
+                (engine, vid, pid, progress) => DirectModeTests.FirmwareBrakeCut(engine, vid, pid, tenths, progress));
+        }
+
+        private async void RunDirectTest(string intro, Func<PedalEngine, int, int, Action<string>, DirectModeTestResult> test)
+        {
+            if (!plugin.Engine.DeviceConnected)
+            {
+                DirectTestStatus.Text = "The pedals aren't connected.";
+                return;
+            }
+            if (MessageBox.Show(intro + "\n\nClose Simsonn Manager first. Start?", "SIMSONN Pedals", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                return;
+
+            SetPedalButtonsEnabled(false);
+            void Progress(string text) => Dispatcher.BeginInvoke(new Action(() => DirectTestStatus.Text = text));
+            Progress("Starting…");
+            try
+            {
+                var engine = plugin.Engine;
+                int vid = plugin.Settings.VendorId, pid = plugin.Settings.ProductId;
+                var result = await Task.Run(() => test(engine, vid, pid, Progress));
+                DirectTestStatus.Text = result.ReportPath == null ? result.Summary : $"{result.Summary} Report: {Path.GetFileName(result.ReportPath)}.";
+            }
+            catch (Exception ex)
+            {
+                DirectTestStatus.Text = "Failed: " + ex.Message + " Check the settings with Read pedal settings.";
             }
             finally
             {

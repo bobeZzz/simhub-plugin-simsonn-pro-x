@@ -180,6 +180,20 @@ namespace SimsonnPedals
             return result;
         }
 
+        /// <summary>
+        /// Copy of <paramref name="block"/> with <paramref name="axis"/>'s output ends (where 0 % and 100 % sit in the raw
+        /// range, i.e. its dead zones) set, and the centre in the middle, as the firmware's own commands do.
+        /// </summary>
+        public static byte[] WithOutputEnds(byte[] block, int axis, int outLow, int outHigh)
+        {
+            var result = (byte[])block.Clone();
+            int o = AxisBase + AxisSize * axis;
+            WriteInt16(result, o + OutLow, outLow);
+            WriteInt16(result, o + OutHigh, outHigh);
+            WriteInt16(result, o + OutCentre, (outLow + outHigh) / 2);
+            return result;
+        }
+
         /// <summary>Smallest raw travel accepted as a calibration (Simsonn Manager's limit too).</summary>
         public const int MinCalibrationSpan = 1000;
 

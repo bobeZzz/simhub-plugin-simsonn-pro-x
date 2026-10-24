@@ -111,6 +111,11 @@ namespace SimsonnPedals
         public int UpshiftCount => upshiftCount;
         public int DownshiftCount => downshiftCount;
 
+        private int disconnectCount;
+
+        /// <summary>Times the pedals dropped off (USB or DirectInput) this session; the D1 tests watch it.</summary>
+        public int DisconnectCount => disconnectCount;
+
         /// <summary>What overrides the throttle at the moment.</summary>
         public ThrottleOverride Override { get; private set; }
 
@@ -155,6 +160,7 @@ namespace SimsonnPedals
                     vjoy.ZeroAll();
                     SafeDispose(joystick);
                     joystick = null;
+                    Interlocked.Increment(ref disconnectCount);
                     DeviceConnected = false;
                     RawAxes = "";
                     replugged = true;
