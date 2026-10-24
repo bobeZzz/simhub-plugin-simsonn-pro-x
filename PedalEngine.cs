@@ -137,6 +137,7 @@ namespace SimsonnPedals
                         if (ready && !VJoyReady)
                         {
                             // Freshly acquired: clear whatever an earlier session or feeder left on these axes.
+                            ExitGuard.Start(s.VJoyDeviceId);
                             var current = activePreset;
                             if (current != null)
                             {

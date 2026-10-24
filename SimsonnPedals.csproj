@@ -37,6 +37,14 @@
   <ItemGroup>
     <!-- Built into the DLL so the plugin stays a single file. -->
     <EmbeddedResource Include="Assets\header.gif" LogicalName="SimsonnPedals.header.gif" />
+    <EmbeddedResource Include="ExitGuard\bin\$(Configuration)\net48\SimsonnPedalsExitGuard.exe" LogicalName="SimsonnPedals.ExitGuard.exe" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The exit guard is its own small exe (built first, then embedded above), not part of the plugin's code. -->
+    <Compile Remove="ExitGuard\**" />
+    <None Remove="ExitGuard\**" />
+    <ProjectReference Include="ExitGuard\ExitGuard.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
 
   <Target Name="DeployToSimHub" AfterTargets="Build" Condition="'$(DeployToSimHub)' == 'true' And Exists('$(SimHubPath)SimHubWPF.exe')">
