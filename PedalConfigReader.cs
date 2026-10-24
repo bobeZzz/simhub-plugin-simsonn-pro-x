@@ -28,6 +28,8 @@ namespace SimsonnPedals
         private const int PayloadPerPacket = 62;
         private const int MaxPackets = 64;
         private const int ReplyTimeoutMs = 600;
+        private const int FirstRequestAttempts = 4;
+        private const int FirstRequestRetryDelayMs = 1000;
 
         public static string OutputFolder =>
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PluginsData", "SimsonnPedals");
@@ -125,8 +127,18 @@ namespace SimsonnPedals
                     request[0] = ReportIdConfigIn;
                     request[1] = (byte)packet;
                     SendConfigInRequest(stream, request);
+                    bool answered = WaitForPacket(stream, reply, packet);
 
-                    if (!WaitForPacket(stream, reply, packet))
+                    // Right after Simsonn Manager saves, the pedals restart and can miss the first request; ask again.
+                    for (int attempt = 1; !answered && packet == 1 && attempt < FirstRequestAttempts; attempt++)
+                    {
+                        report.AppendLine($"  No reply to the first settings request, asking again ({attempt + 1}/{FirstRequestAttempts}).");
+                        System.Threading.Thread.Sleep(FirstRequestRetryDelayMs);
+                        SendConfigInRequest(stream, request);
+                        answered = WaitForPacket(stream, reply, packet);
+                    }
+
+                    if (!answered)
                     {
                         // FreeJoy ignores requests past the last packet, so silence after packet 1 means "done".
                         if (packet == 1)
