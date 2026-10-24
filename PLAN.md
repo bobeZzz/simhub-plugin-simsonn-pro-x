@@ -49,29 +49,16 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | F5 | **Set up pedals** switches the firmware throttle cut off (report 6 `brakeCutoff`); verified on the rig: no restart, both pedals work together, stays off after SimHub restart and replug | 1.0.7 |
 | 8 | **Calibrate pedals**: live raw values from the params report (`PedalRawMonitor`), Start at rest → press → Finish; one block write (throttle raw range, brake rest, then Set up pedals); plugin calibration of all presets reset to full range. Rig run 20:46: written and verified; throttle raw −32767…−8522, brake rest −30341 → −30239, 85 kg kept, only the expected bytes changed | 1.0.8 |
 | 9 | **Firmware update** from the plugin with the Manager's own files and key (CRC-checked): main chip via SIMSONN Flasher report 5, second chip via report 7, resume from update mode, rollback file choice. Rig: 2.0.8 → 2.1.1 / 2.0.6. 2.1.x support: pedal axes and raw channels found from the block (3–5 on 2.1), presets switched to Rx/Ry; calibration on 2.1.1 verified, bars move. See [research/firmware-update.md](research/firmware-update.md) | 1.0.9–1.0.12 |
+| 3 | **Per-car and per-class presets**: automatic lookup car → class → game → Default; Save for <car> / <class>; a line shows the automatic choice and why. iRacing class read from the raw session info (`CarClassID`), since SimHub's CarClass is blank in single-class sessions. Rig-checked | 1.0.13–1.0.14 |
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-1. **Phase 3 – per-car presets: built in 1.0.13, rig check pending.**
-   - Lookup order: car → class → game → Default. Links are `CarPresets` / `ClassPresets`, keyed "game|car id" and
-     "game|class". SimHub supplies `GameData.NewData.CarId` / `CarModel` / `CarClass`.
-   - The last car is kept through menus, and the lookup reruns once per game / car / class change.
-   - New buttons: "Save for <car>" and "Save for <class> class", which save as a named preset and link it. A line
-     shows the game and car, the automatic choice and why, and whether the preset in use was picked by hand.
-   - Deleting a preset drops its links. Tested offline: lookup order, case, a stale link dropped.
-   - 1.0.13 on the rig: car presets work (Acura NSX GT3 EVO 22). The class was empty: SimHub takes it from
-     `CarClassShortName`, which iRacing leaves blank in single-class sessions.
-   - 1.0.14 reads the class from SimHub's raw iRacing data instead (`IRacingCarClass`, by reflection).
-     - Class presets are linked by `CarClassID` ("id:4029"), the same in every session type.
-     - The shown name is the short name, else "Class <id>".
-     - If the read fails, the raw type is logged once per game.
-   - Rig check: the class button enables in iRacing, and switching cars in the same class picks the class preset.
-2. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
+1. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
    the brake pressed in the sim). Zeroing in End/ProcessExit isn't enough; an earlier exit-watchdog attempt was abandoned.
-3. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.
-4. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
-5. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
-6. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
+2. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.
+3. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
+4. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
+5. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
 
 ## Maybe / parked
 - **Live brake max force** (report 6 `damping_max`, sent by the Manager while the spinner moves). If it applies without
