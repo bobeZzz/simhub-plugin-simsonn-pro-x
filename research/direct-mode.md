@@ -53,3 +53,13 @@ the axis loop reads them every cycle (research/curves.md).
   see it saved; puts it back.
 - **Firmware brake cut test**: `brakeCutoff` on at a level for 10 s; reports where the throttle was cut; sets it back.
 Each writes a `direct-test-*.txt` report with a 50 ms trace to the dump folder.
+
+### Rig run 2026-10-24 23:08–23:09 (firmware 2.1.1, `rig-data-from-simsonn-manager/test-results`)
+From the settings dumps and write logs (the `direct-test-*.txt` reports weren't in the copy yet):
+- **Live write test**: the test block (throttle axis 3 high end 5799 → 4179, centre moved) was written and read back
+  exactly 2–5 s later, at the first attempt; the restore put the block back byte for byte. Only `0x0DE–0x0E1` changed.
+- **Live max force test** (run twice): `damping_max` changed exactly the bytes predicted: brake axis 4 centre, high
+  end and raw max (`0x112–0x115`, `0x118–0x119`; raw max 15509 → 9219). The block read right after shows them:
+  **saved to flash**. The restore brought the block back byte for byte, both runs.
+- **Firmware brake cut test**: not run yet.
+- Still to read from the reports: whether each change applied live while held, and whether DirectInput lost the pedals.
