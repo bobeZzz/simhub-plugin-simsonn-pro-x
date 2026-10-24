@@ -30,11 +30,11 @@ Axis 0 = throttle (HID X), 1 = brake (HID Y), 2 = clutch (HID Z), 3–7 unused.
 
 | Offset in axis | Size | Field | Throttle / Brake / Clutch | Status |
 |---|---|---|---|---|
-| +0 | 2 | Simsonn extra (old_calib_min?) | -31561 / -28989 / -32767 | unknown |
-| +2 | 2 | Simsonn extra (old_calib_max?) | -20828 / -13712 / 0 | unknown |
-| +4 | 2 | calib_min (int16) | -10095 / 1565 / 32767 | likely |
-| +6 | 2 | calib_center (int16) | -32767 / -30127 / -32767 | likely |
-| +8 | 2 | calib_max (int16) | -8648 / 3233 / 32767 | likely |
+| +0 | 2 | output low end = raw_min + dz_start% · (raw_max − raw_min) | -31561 / -28989 / -32767 | confirmed (F2) |
+| +2 | 2 | output centre = midpoint of +0 and +4 (Manager doesn't always refresh it) | -20828 / -13712 / 0 | confirmed (F2) |
+| +4 | 2 | output high end = raw_max − (100 − dz_end)% · (raw_max − raw_min) | -10095 / 1565 / 32767 | confirmed (F2) |
+| +6 | 2 | raw_min: sensor value at rest (calibration) | -32767 / -30127 / -32767 | confirmed (F2) |
+| +8 | 2 | raw_max: sensor value at full travel. Brake: set from max force, −32767 + kg · 1000/3 | -8648 / 3233 / 32767 | confirmed (F2, brake from 2 points) |
 | +10 | 1 | bit0 out_enabled, bit1 inverted, bits2–4 function, bits5–7 filter | 0x41 (on, filter 2) all three | confirmed (filter 2) |
 | +11 | 11 | curve points, int8 −100…100 | brake point 5 = 12, others linear | confirmed |
 | +22 | 1 | resolution:4 / channel:4 | 0x0F | likely |
@@ -47,8 +47,8 @@ Axis 0 = throttle (HID X), 1 = brake (HID Y), 2 = clutch (HID Z), 3–7 unused.
 | +31 | 1 | button types (bitfield) | 0xBC | likely |
 | +32 | 1 | prescaler | 100 | likely |
 | +33 | 1 | ? | 0 | unknown |
-| +34 | 1 | left dead zone % | 5 / 6 / 5 | likely (to confirm which side) |
-| +35 | 1 | right dead zone % (100 − end) | 6 / 5 / 5 | likely |
+| +34 | 1 | dead zone start % (Manager UI value, kept for display) | 5 / 6 / 5 | confirmed (F2) |
+| +35 | 1 | dead zone end as 100 − end % | 6 / 5 / 5 | confirmed (F2) |
 | +36 | 16 | lighting (color_1 u32, color_2 u32, model, brightness, speed, control, abs, tc, sync…) | | likely |
 
 ## Rest of the block
@@ -64,7 +64,38 @@ Axis 0 = throttle (HID X), 1 = brake (HID Y), 2 = clutch (HID Z), 3–7 unused.
 | 0x42A | 16 | encoders (type 1) | likely |
 | 0x43A– | | zeros / padding | unknown |
 
+## F2 one-change tests (2026-10-24, cumulative: each step kept the previous changes)
+Files: `pedal-settings-20261024-18*.bin/.txt`. The baseline is a reset state: every axis has raw_min −32767,
+raw_max/ends 32767, dead zones 0, filter off (`+10` = 0x01), linear curves.
+
+| Step | Bytes changed | Meaning |
+|---|---|---|
+| brake dead zone start 10 | brake +34 = 10; +0 = −32567, +2, +4/+8 = −30767 | start dz; Manager also wrote raw_max −30767 (= 6 kg by the formula) |
+| brake dead zone end 90 | brake +35 = 10; +2 = −31767, +4 = −30967 | end dz stored as 100 − end; centre recomputed |
+| brake max force 50 | brake +8 = −16101, +0 = −31100, +4 = −17767 | max force sets raw_max; ends recomputed with the 10 % dead zones |
+| brake elastomer (medium) | none | not in this block |
+| throttle cut 30 | none | not in this block |
+| brake filter 5 | skipped | filter dropped from the plugin; field already known (+10 bits 5–7) |
+| brake curve p8 40 | none | unexpected: curves are at +11 (brake p5 = 12 in the 17:47 dump). Probably not saved to the pedals; retest |
+| throttle dead zone start 10 | throttle +34 = 10; +0 = −26213, +2 = 3277 | same formula on the full −32767…32767 range |
+| brake calibrated | read failed (no reply) | retest with Simsonn Manager closed |
+
+Checks: 17:47 throttle (raw −32767…−8648, dz 5/6) gives ends −31561/−10095 and centre −20828, exactly as stored.
+The 17:47 brake start end doesn't fit (1138 instead of 2002 for 6 %); unexplained.
+
+## Round 2 (2026-10-24 19:03–19:25, cumulative from `baseline2`, which is a reset state again)
+| Step | Bytes changed | Meaning |
+|---|---|---|
+| throttle threshold 50 %, Manager then shows 0.1 % | brake +43: 0 → 0xFF; brake +0 = −32767, +4/+8 = −28567 | throttle cut lives on the **brake** axis (cut throttle above a brake level). 50 % was stored as 0xFF (−1, FreeJoy's "none"), which Manager shows as 0.1 %: the value isn't accepted. Manager also rewrote brake raw_max (4200 above min) |
+| throttle cut off (shows off) | none | on/off isn't a separate field, or 0xFF already means off |
+| brake elastomer hard | none | elastomer isn't stored in the pedals: a Manager-only setting |
+| brake curve p8 | brake +18: 40 → 99 | curve point 8 = +18 (index 7). Linear point 8 is already 40, which is why round 1 showed nothing |
+| brake max force 80 | read failed | the reader now asks up to 4 times before giving up |
+| brake calibrated | read failed | as above |
+
 ## Not found yet
-Max force (kg), elastomer and throttle-cut threshold have no obvious field. They may be encoded in the
-calibration values (max force → calib_max), in the unknown bytes above, or sent through the separate
-"params" reports (ID 2/6). F2 one-change tests will show which.
+- Throttle cut threshold: brake +43 is the candidate, but the only value seen is 0xFF (rejected). A
+  value that sticks in Manager would show the encoding.
+- Elastomer: not in the pedals.
+- Max force scale: the 1000/3 per kg formula is from round 1 (6 and 50 kg); round 2's −28567 would be 12.6 kg
+  by it. Needs a successful 80 kg read.

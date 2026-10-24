@@ -1,0 +1,18 @@
+Result: The pedals did not answer the settings request. See the report file.
+SIMSONN pedal settings dump, 2026-10-24 18:35:06
+Label: brake calibrated
+Looking for VID_DDFD PID_6012
+
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_00#a&24426209&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 7, out 0, feature 0
+  Input reports:   ID 1 (7 bytes)
+  Output reports:  none
+  Feature reports: none
+Interface: \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  Max report lengths: in 64, out 64, feature 0
+  Input reports:   ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Output reports:  ID 2 (64 bytes), ID 3 (64 bytes), ID 4 (64 bytes), ID 5 (64 bytes), ID 6 (64 bytes)
+  Feature reports: none
+
+Reading settings from \\?\hid#vid_ddfd&pid_6012&mi_01#a&6b2447&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+  No reply to the first settings request.
