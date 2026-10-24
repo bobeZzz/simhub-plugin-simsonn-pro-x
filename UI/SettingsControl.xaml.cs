@@ -516,11 +516,14 @@ namespace SimsonnPedals.UI
                 var log = new System.Text.StringBuilder();
                 var files = folder == null ? new System.Collections.Generic.List<FirmwareFile>() : await Task.Run(() => FirmwareFile.FindFor(pid, folder, log));
                 string versionError = null;
-                var versions = await Task.Run(() => PedalRawMonitor.ReadVersions(vid, pid, 3000, out versionError));
+                bool updateMode = await Task.Run(() => PedalFirmwareUpdater.IsInUpdateMode(vid));
+                var versions = updateMode ? null : await Task.Run(() => PedalRawMonitor.ReadVersions(vid, pid, 3000, out versionError));
 
                 var lines = new System.Collections.Generic.List<string>
                 {
-                    versions == null
+                    updateMode
+                        ? "The pedals are in update mode (SIMSONN Flasher). Close Simsonn Manager, choose a firmware and click Update firmware to finish."
+                        : versions == null
                         ? "Pedals: couldn't read the firmware version (" + versionError + ")"
                         : $"Pedals run firmware {PedalRawMonitor.VersionText(versions.Value.Main, false)}, second chip {PedalRawMonitor.VersionText(versions.Value.Sub, true)}."
                 };

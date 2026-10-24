@@ -51,7 +51,12 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
-0. **Phase 9 – firmware update from the plugin: built in 1.0.9, rig check pending.**
+0. **Phase 9 – firmware update from the plugin: built in 1.0.9; second chip fixed in 1.0.10, rig check pending.**
+   - 1.0.9 on the rig: bootloader entry and the main chip (2.1.1) worked; the flasher is PID 0x5055.
+   - 1.0.9 then waited for the pedals to restart, but the second chip goes to the flasher on report 7. That left the
+     pedals in update mode.
+   - 1.0.10 sends the second chip to the flasher. Update firmware also finishes from update mode: it flashes both
+     chips again without the bootloader command.
    - Protocol: `research/firmware-update.md`.
    - Code: `FirmwareFile` reads and decrypts the `.sfu` files using the key from the user's Manager install, and checks
      model and CRCs. `PedalFirmwareUpdater` does bootloader run → flasher report 5 → second chip report 7 → version

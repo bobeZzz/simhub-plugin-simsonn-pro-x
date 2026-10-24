@@ -62,36 +62,44 @@ namespace SimsonnPedals
                 return Finish(false, false, $"Nothing was changed: {firmware.FileName} is for \"{firmware.Model}\", not these pedals.", report);
             if (Process.GetProcessesByName("SIMSONN Manager").Length > 0)
                 return Finish(false, false, "Nothing was changed: close Simsonn Manager first, it talks to the bootloader too.", report);
-            var before = PedalRawMonitor.ReadVersions(vendorId, productId, 3000, out string versionError);
-            if (before == null)
-                return Finish(false, false, "Nothing was changed: couldn't read the pedals' firmware version: " + versionError, report);
-            Step($"Pedals run {PedalRawMonitor.VersionText(before.Value.Main, false)} (second chip {PedalRawMonitor.VersionText(before.Value.Sub, true)}), " +
-                 $"version words 0x{before.Value.Main:X4} / 0x{before.Value.Sub:X4}.");
-            if (FindFlasher(vendorId, report) != null)
-                return Finish(false, false, "Nothing was changed: a SIMSONN Flasher is already connected. Finish that update with Simsonn Manager.", report);
-
-            var settings = PedalConfigReader.FindInterfaces(DeviceList.Local.GetHidDevices(vendorId, productId), ReportIdBootloader, report);
-            if (settings.Count != 1)
-                return Finish(false, false, $"Nothing was changed: expected one settings interface, found {settings.Count}.", report);
-
-            // 1. Restart into the bootloader.
-            Step("Restarting the pedals into update mode…");
-            try
+            string versionError;
+            // Pedals left in update mode (an earlier update stopped part way): flash both chips again from there.
+            HidDevice flasher = FindFlasher(vendorId, report);
+            if (flasher != null)
             {
-                SendBootloaderRun(settings[0]);
+                Step("The pedals are already in update mode; flashing both chips from there.");
             }
-            catch (Exception ex)
+            else
             {
-                return Finish(false, false, $"Nothing was changed: couldn't send the update command ({ex.Message}).", report);
-            }
+                var before = PedalRawMonitor.ReadVersions(vendorId, productId, 3000, out versionError);
+                if (before == null)
+                    return Finish(false, false, "Nothing was changed: couldn't read the pedals' firmware version: " + versionError, report);
+                Step($"Pedals run {PedalRawMonitor.VersionText(before.Value.Main, false)} (second chip {PedalRawMonitor.VersionText(before.Value.Sub, true)}), " +
+                     $"version words 0x{before.Value.Main:X4} / 0x{before.Value.Sub:X4}.");
 
-            HidDevice flasher = WaitFor(() => FindFlasher(vendorId, report: null), FlasherWaitMs);
-            if (flasher == null)
-            {
-                bool back = DeviceList.Local.GetHidDevices(vendorId, productId).Any();
-                return Finish(false, !back, back
-                    ? "Nothing was changed: the pedals didn't switch to update mode."
-                    : "The pedals left USB but no SIMSONN Flasher appeared. Replug them; if they don't come back, run the update in Simsonn Manager.", report);
+                var settings = PedalConfigReader.FindInterfaces(DeviceList.Local.GetHidDevices(vendorId, productId), ReportIdBootloader, report);
+                if (settings.Count != 1)
+                    return Finish(false, false, $"Nothing was changed: expected one settings interface, found {settings.Count}.", report);
+
+                // 1. Restart into the bootloader.
+                Step("Restarting the pedals into update mode…");
+                try
+                {
+                    SendBootloaderRun(settings[0]);
+                }
+                catch (Exception ex)
+                {
+                    return Finish(false, false, $"Nothing was changed: couldn't send the update command ({ex.Message}).", report);
+                }
+
+                flasher = WaitFor(() => FindFlasher(vendorId, report: null), FlasherWaitMs);
+                if (flasher == null)
+                {
+                    bool back = DeviceList.Local.GetHidDevices(vendorId, productId).Any();
+                    return Finish(false, !back, back
+                        ? "Nothing was changed: the pedals didn't switch to update mode."
+                        : "The pedals left USB but no SIMSONN Flasher appeared. Replug them; if they don't come back, run the update in Simsonn Manager.", report);
+                }
             }
             report.AppendLine();
             report.AppendLine($"Flasher: PID 0x{flasher.ProductID:X4}, \"{SafeName(flasher)}\", {flasher.DevicePath}");
@@ -103,24 +111,25 @@ namespace SimsonnPedals
                 return Finish(false, true, $"Updating the main firmware failed: {error} The pedals are probably still in update mode: " +
                                            "run the update again here or in Simsonn Manager.", report);
 
-            // 3. Second chip, through the new main firmware.
-            Step("Main firmware written; waiting for the pedals to restart…");
+            // 3. Second chip: the flasher itself takes it on report 7 (seen on the rig: the flasher offers reports 5, 7 and 8,
+            //    and stays in update mode after the main chip).
+            Step("Main firmware written; writing the second chip…");
             Thread.Sleep(1000);
-            HidDevice pedals = WaitFor(() => PedalConfigReader.FindInterfaces(DeviceList.Local.GetHidDevices(vendorId, productId), ReportIdSubFlash, new StringBuilder()).FirstOrDefault(), PedalsWaitMs);
-            if (pedals == null)
-            {
-                PedalConfigReader.FindInterfaces(DeviceList.Local.GetHidDevices(vendorId, productId), ReportIdSubFlash, report);
-                return Finish(false, true, $"The main firmware is now {firmware.MainVersion}, but the pedals don't offer the second chip's update channel " +
-                                           "(report 7). Run the same update in Simsonn Manager to finish the second chip.", report);
-            }
-            report.AppendLine($"Second chip channel: {pedals.DevicePath}");
-            error = FlashWithRetries(pedals, ReportIdSubFlash, firmware.SubImage, firmware.SubCrc, "second chip", Step);
+            HidDevice subChannel = WaitFor(() => FindFlasher(vendorId, report: null), FlasherWaitMs);
+            if (subChannel == null)
+                return Finish(false, true, $"The main firmware is now {firmware.MainVersion}, but the update mode closed before the second chip. " +
+                                           "Replug the pedals and run the update again, here or in Simsonn Manager.", report);
+            report.AppendLine($"Second chip channel: {subChannel.DevicePath}");
+            error = FlashWithRetries(subChannel, ReportIdSubFlash, firmware.SubImage, firmware.SubCrc, "second chip", Step);
             if (error != null)
                 return Finish(false, true, $"The main firmware is now {firmware.MainVersion}, but updating the second chip failed: {error} " +
-                                           "Run the update again here or in Simsonn Manager.", report);
+                                           "The pedals stay in update mode: run the update again, here or in Simsonn Manager.", report);
 
-            // 4. Check what the pedals now report.
-            Step("Second chip written; checking the versions…");
+            // 4. The pedals should leave update mode on their own; check what they now report.
+            Step("Second chip written; waiting for the pedals to restart…");
+            if (WaitFor(() => DeviceList.Local.GetHidDevices(vendorId, productId).FirstOrDefault(), PedalsWaitMs) == null)
+                return Finish(false, true, "Both chips were written, but the pedals stayed in update mode. Unplug and replug the USB cable, " +
+                                           "then use Check firmware to confirm the versions.", report);
             (ushort Main, ushort Sub)? after = null;
             for (int attempt = 0; attempt < 10 && after == null; attempt++)
             {
@@ -136,6 +145,9 @@ namespace SimsonnPedals
                 ? $"Firmware updated: main {main}, second chip {sub}."
                 : $"Flashed, but the pedals report main {main}, second chip {sub} (expected {firmware.MainVersion} / {firmware.SubVersion}). See the report file.", report);
         }
+
+        /// <summary>True if the pedals are sitting in update mode (the SIMSONN Flasher bootloader).</summary>
+        public static bool IsInUpdateMode(int vendorId) => FindFlasher(vendorId, null) != null;
 
         /// <summary>A connected SIMSONN or FreeJoy Flasher (the pedals' bootloader), or null.</summary>
         private static HidDevice FindFlasher(int vendorId, StringBuilder report)

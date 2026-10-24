@@ -62,11 +62,14 @@ Every header field is a 16-byte, zero-padded ASCII string.
    - Opens it, retrying 5 times with 500 ms between tries.
    - Then runs the exchange below with report ID **5**.
 4. **On success: sleep 1 s, then `flashFirmware(sub, mode 1, subCrc, pid, subVersion)`**
-   - This is the same exchange with report ID **7**, sent to the pedals' normal settings interface, now running the new
-     main firmware. The main chip passes the image on to the sub chip.
-   - Afterwards it reads `version_sub` up to 7 times, 1 s apart, until it matches.
-   - Firmware 2.0.8 lists only reports 2–6 on that interface, so report 7 must come with the new main firmware. That
-     can't be checked statically: the HID descriptors are stored compressed in the image.
+   - This is the same exchange with report ID **7**, sent **to the flasher**.
+   - Seen on the rig with 1.0.9: the flasher (PID 0x5055, "SIMSONN Flasher") offers reports 5, 7 and 8. Its input
+     reports are 13 bytes and its output reports 64 bytes.
+   - After the main chip's 0xF000 the flasher stays in update mode, waiting for the second chip.
+   - 1.0.9 wrongly waited for the pedals to restart and stopped there. That left the pedals in update mode with main
+     2.1.1 written; the Manager shows this as "Recovery/Upgrade Mode".
+   - Afterwards the Manager reads `version_sub` up to 7 times, 1 s apart, until it matches.
+   - Report 8's purpose is unknown; the Manager doesn't use it for pedals.
 
 Mode 2 (report ID 4) is used only for older devices (PID 0x5008 group, `enterToFlashMode(0x5008)`).
 
