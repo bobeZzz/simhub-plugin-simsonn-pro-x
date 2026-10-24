@@ -247,6 +247,28 @@ namespace SimsonnPedals
         }
 
         /// <summary>
+        /// Points every preset at the joystick axes the pedals now send (call on the UI thread). FreeJoy names its axes
+        /// X, Y, Z, Rx, Ry, Rz in settings order, so the throttle on settings axis 3 (firmware 2.1.x) arrives as Rx.
+        /// Returns true if anything changed.
+        /// </summary>
+        public bool SetPedalSourceAxes(byte[] settingsBlock)
+        {
+            var throttle = (InputAxis)PedalSettingsLayout.ThrottleAxis(settingsBlock);
+            var brake = (InputAxis)PedalSettingsLayout.BrakeAxis(settingsBlock);
+            bool changed = false;
+            // A fact about the pedals, not an edit: update the saved copies too, so presets don't show as unsaved.
+            foreach (var preset in Settings.Presets.Values.Concat(Settings.SavedPresets.Values))
+            {
+                changed |= preset.Throttle.SourceAxis != throttle || preset.Brake.SourceAxis != brake;
+                preset.Throttle.SourceAxis = throttle;
+                preset.Brake.SourceAxis = brake;
+            }
+            lock (presetLock) modifiedCache.Clear();
+            if (changed) Save();
+            return changed;
+        }
+
+        /// <summary>
         /// After calibrating the pedals themselves they report 0–100 % over the full axis, so the plugin's own
         /// calibration in every preset goes back to the full range (call on the UI thread).
         /// </summary>

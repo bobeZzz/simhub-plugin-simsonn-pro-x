@@ -183,6 +183,8 @@ namespace SimsonnPedals.UI
                 {
                     PedalSettingsStatus.Text += Environment.NewLine + $"Firmware {PedalSettingsLayout.FirmwareVersionText(result.Data)}" +
                                                 Environment.NewLine + PedalSettingsLayout.Describe(result.Data);
+                    string axes = SyncSourceAxes(result.Data);
+                    if (axes != null) PedalSettingsStatus.Text += Environment.NewLine + axes;
                     PedalSettingsStatus.Text += Environment.NewLine + (result.LiveSummary ?? "Live status: no answer (see the report file).");
                 }
             }
@@ -243,7 +245,8 @@ namespace SimsonnPedals.UI
                 {
                     plugin.SetPedalMaxForce(kg);
                     PedalSettingsStatus.Text = "The pedals are already set up this way." + Environment.NewLine +
-                                               PedalSettingsLayout.Describe(current.Data) + Environment.NewLine + cutoffNow;
+                                               PedalSettingsLayout.Describe(current.Data) + Environment.NewLine + cutoffNow +
+                                               (SyncSourceAxes(current.Data) is string axesLine ? Environment.NewLine + axesLine : "");
                     return;
                 }
 
@@ -279,7 +282,12 @@ namespace SimsonnPedals.UI
                     if (result.Success) lines.Insert(1, PedalSettingsLayout.Describe(wanted));
                 }
 
-                if (blockWritten) plugin.SetPedalMaxForce(kg);
+                if (blockWritten)
+                {
+                    plugin.SetPedalMaxForce(kg);
+                    string axes = SyncSourceAxes(current.Data);
+                    if (axes != null) lines.Add(axes);
+                }
                 PedalSettingsStatus.Text = string.Join(Environment.NewLine, lines);
             }
             catch (Exception ex)
@@ -290,6 +298,14 @@ namespace SimsonnPedals.UI
             {
                 SetPedalButtonsEnabled(true);
             }
+        }
+
+        /// <summary>Points the presets at the joystick axes the pedals send; a line to show if that changed anything.</summary>
+        private string SyncSourceAxes(byte[] block)
+        {
+            if (!PedalSettingsLayout.IsLayoutVerified(block) || !plugin.SetPedalSourceAxes(block)) return null;
+            return $"Throttle and brake now read joystick axes {(InputAxis)PedalSettingsLayout.ThrottleAxis(block)} and " +
+                   $"{(InputAxis)PedalSettingsLayout.BrakeAxis(block)} in every preset (where firmware {PedalSettingsLayout.FirmwareVersionText(block)} sends them).";
         }
 
         private void SetPedalButtonsEnabled(bool enabled) =>
@@ -465,7 +481,8 @@ namespace SimsonnPedals.UI
                 PedalSettingsStatus.Text = result.ReportPath == null ? result.Summary : $"{result.Summary} Report: {Path.GetFileName(result.ReportPath)}.";
                 if (result.Success)
                     PedalSettingsStatus.Text += Environment.NewLine + PedalSettingsLayout.DescribeCalibration(wanted) +
-                                                Environment.NewLine + PedalSettingsLayout.Describe(wanted);
+                                                Environment.NewLine + PedalSettingsLayout.Describe(wanted) +
+                                                (SyncSourceAxes(wanted) is string axesLine ? Environment.NewLine + axesLine : "");
             }
             catch (Exception ex)
             {

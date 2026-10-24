@@ -67,9 +67,14 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
      - throttle cut (off) and elastomer (hard) survived.
    - 1.0.11 finds the pedal axes from the source byte (`PedalAxisBase`: 0 on 2.0.x, 3 on 2.1.x), and allows Set up and
      Calibrate on 2.1.x with 148 units/kg (from the Manager's code, untested).
-   - Rig check for 1.0.11:
-     - calibrate from the plugin;
-     - check that the bars and the HID joystick still move. Which HID axes 2.1.1 sends axes 3–5 to is unknown.
+   - 1.0.11 on the rig: calibration on 2.1.1 was written and verified.
+     - Throttle axis 3: 2561…5779.
+     - Brake axis 4: rest 2923, 85 kg = +12580 at 148 units/kg.
+     - The pedals' processed output is ≈0 % at rest.
+     - The plugin's bars stayed still: the presets read joystick X/Y, which are dead now.
+   - FreeJoy names its axes X, Y, Z, Rx, Ry, Rz in settings order, so axes 3–4 should arrive as Rx/Ry.
+   - 1.0.12 sets every preset's source axes from the settings block after Read, Set up and Calibrate. Rig check:
+     "Raw axes" shows Rx/Ry moving and the bars follow.
    - Protocol: `research/firmware-update.md`.
    - Code: `FirmwareFile` reads and decrypts the `.sfu` files using the key from the user's Manager install, and checks
      model and CRCs. `PedalFirmwareUpdater` does bootloader run → flasher report 5 → second chip report 7 → version
