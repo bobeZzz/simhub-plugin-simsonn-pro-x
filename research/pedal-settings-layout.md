@@ -10,7 +10,8 @@ but not yet checked by a one-change test (F2); **unknown** = not identified.
 ## Protocol (confirmed for reads)
 - Read: send output report `[3, n, 0…]` (n = 1-based packet); reply input report `[3, n, 62 bytes]`.
   No reply after the last packet. Joystick input pauses ~2 s while this runs.
-- Write (FreeJoy, not yet used): output reports `[4, n, 62 bytes]`; device acks each with `[4, n+1]`.
+- Write (FreeJoy, implemented in `PedalConfigWriter`, first tried by the 1.0.3 rewrite test): host sends `[4, 0]`,
+  device answers `[4, 1]`; then output reports `[4, n, 62 bytes]`, each answered with `[4, n+1]`.
   After the last packet it checks `firmware_version & 0xFFF0`, saves to flash and **resets** (USB drops ~1–2 s).
   On version mismatch it replies `[4, 0xFE]` and saves nothing.
 
@@ -93,9 +94,19 @@ The 17:47 brake start end doesn't fit (1138 instead of 2002 for 6 %); unexplaine
 | brake max force 80 | read failed | the reader now asks up to 4 times before giving up |
 | brake calibrated | read failed | as above |
 
+## Round 3 (2026-10-24 19:31–19:33, plugin 1.0.2 reader, both reads answered first time)
+| Step | Bytes changed | Meaning |
+|---|---|---|
+| max force 80 (after the brake calibration from round 2) | brake +6 raw_min −32767 → −30341; +8 raw_max → −6341; +0/+4 follow (dz 0); +2 centre −18838 | calibration sets raw_min (rest value). Max force sets raw_max = raw_min + 24000 = 80 × 300 |
+| throttle threshold low | none (brake +43 stays 0xFF) | the threshold isn't stored in this block |
+| max force 60, same calibration (19:37) | brake +8 raw_max → −12341; +0/+4 follow | span 18000 = 60 × 300: **raw_max = raw_min + 300 · kg** confirmed |
+
+Max force scale: 300 units/kg, confirmed by 80 kg → 24000 and 60 kg → 18000 on the same calibration.
+Round 1 (reset state, uncalibrated) fitted 333.3 units/kg instead; the round-1 kg values were probably not
+what was assumed, or the uncalibrated state scales differently. Use 300 on a calibrated pedal.
+
 ## Not found yet
-- Throttle cut threshold: brake +43 is the candidate, but the only value seen is 0xFF (rejected). A
-  value that sticks in Manager would show the encoding.
-- Elastomer: not in the pedals.
-- Max force scale: the 1000/3 per kg formula is from round 1 (6 and 50 kg); round 2's −28567 would be 12.6 kg
-  by it. Needs a successful 80 kg read.
+- Throttle cut threshold: not in the block. Brake +43 went to 0xFF on the first save and never changed again,
+  whatever the threshold. The plugin will handle throttle cut itself.
+- Elastomer: not in the pedals (Manager-only).
+- Centre word (+2): not always the midpoint of the ends (−18838 vs −18341 in round 3); likely unused for pedals.
