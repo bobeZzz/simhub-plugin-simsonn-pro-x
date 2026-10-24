@@ -10,7 +10,7 @@ but not yet checked by a one-change test (F2); **unknown** = not identified.
 ## Protocol (confirmed for reads)
 - Read: send output report `[3, n, 0…]` (n = 1-based packet); reply input report `[3, n, 62 bytes]`.
   No reply after the last packet. Joystick input pauses ~2 s while this runs.
-- Write (FreeJoy, implemented in `PedalConfigWriter`, first tried by the 1.0.3 rewrite test): host sends `[4, 0]`,
+- Write (FreeJoy, `PedalConfigWriter`; confirmed by the 1.0.3 rewrite test on 2026-10-24: start answered `[4, 1]`, no answer after packet 18 as the pedals restart, read-back identical): host sends `[4, 0]`,
   device answers `[4, 1]`; then output reports `[4, n, 62 bytes]`, each answered with `[4, n+1]`.
   After the last packet it checks `firmware_version & 0xFFF0`, saves to flash and **resets** (USB drops ~1–2 s).
   On version mismatch it replies `[4, 0xFE]` and saves nothing.
