@@ -125,13 +125,19 @@
                 </StackPanel>
             </styles:SHSection>
 
+            <styles:SHToggleCheckbox x:Name="ClutchToggle" Margin="4,4,0,0" Click="OnClutchToggleClick"
+                                     ToolTip="Shape the clutch here too and send it to its own vJoy axis (Z unless changed in its Axis mapping)">
+                Clutch pedal connected
+            </styles:SHToggleCheckbox>
             <Grid Margin="0,4,0,0">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="ClutchColumn" Width="0" />
                     <ColumnDefinition />
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
-                <local:PedalPanel x:Name="BrakePanel" Title="Brake" ShowMaxForce="True" />
-                <local:PedalPanel x:Name="ThrottlePanel" Grid.Column="1" Title="Throttle" />
+                <local:PedalPanel x:Name="ClutchPanel" Title="Clutch" Visibility="Collapsed" />
+                <local:PedalPanel x:Name="BrakePanel" Grid.Column="1" Title="Brake" ShowMaxForce="True" />
+                <local:PedalPanel x:Name="ThrottlePanel" Grid.Column="2" Title="Throttle" />
             </Grid>
         </StackPanel>
     </ScrollViewer>

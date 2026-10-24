@@ -130,11 +130,11 @@ namespace SimsonnPedals
         }
 
         /// <summary>Zeroes and forgets axes no longer in use, e.g. after a pedal is remapped or a preset switches axes.</summary>
-        public void ZeroUnused(VJoyAxis inUse1, VJoyAxis inUse2)
+        public void ZeroUnused(VJoyAxis inUse1, VJoyAxis inUse2, VJoyAxis inUse3)
         {
             List<VJoyAxis> stale = null;
             foreach (var axis in writtenAxes)
-                if (axis != inUse1 && axis != inUse2) (stale ??= new List<VJoyAxis>()).Add(axis);
+                if (axis != inUse1 && axis != inUse2 && axis != inUse3) (stale ??= new List<VJoyAxis>()).Add(axis);
             if (stale == null) return;
             foreach (var axis in stale)
             {

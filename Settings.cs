@@ -129,17 +129,21 @@ namespace SimsonnPedals
         public PedalConfig Throttle { get; set; }
         public PedalConfig Brake { get; set; }
 
+        /// <summary>Used only when <see cref="PluginSettings.ClutchEnabled"/> is on.</summary>
+        public PedalConfig Clutch { get; set; }
+
         /// <summary>
-        /// Pro X Ultra reports throttle on X and brake on Y; they go to the same vJoy axes.
+        /// Pro X Ultra reports throttle on X, brake on Y and clutch on Z; they go to the same vJoy axes.
         /// The brake is a load cell, so it gets max force scaling (starting from 60 kg, the value the pedals shipped with).
         /// </summary>
         public static PedalPreset CreateDefault() => new PedalPreset
         {
             Throttle = new PedalConfig { SourceAxis = InputAxis.X, OutputAxis = VJoyAxis.X },
             Brake = new PedalConfig { SourceAxis = InputAxis.Y, OutputAxis = VJoyAxis.Y, FirmwareMaxForceKg = 60, MaxForceKg = 60 },
+            Clutch = new PedalConfig { SourceAxis = InputAxis.Z, OutputAxis = VJoyAxis.Z },
         };
 
-        public PedalPreset Clone() => new PedalPreset { Throttle = Throttle.Clone(), Brake = Brake.Clone() };
+        public PedalPreset Clone() => new PedalPreset { Throttle = Throttle.Clone(), Brake = Brake.Clone(), Clutch = Clutch.Clone() };
 
         public bool SameAs(PedalPreset other) =>
             other != null && JsonConvert.SerializeObject(this) == JsonConvert.SerializeObject(other);
@@ -149,6 +153,12 @@ namespace SimsonnPedals
             var defaults = CreateDefault();
             Throttle = Throttle ?? defaults.Throttle;
             Brake = Brake ?? defaults.Brake;
+            // Presets from before the clutch: it sits two axes after the throttle (Z on 2.0.x, Rz on 2.1.x).
+            if (Clutch == null)
+            {
+                Clutch = defaults.Clutch;
+                if (Throttle.SourceAxis == InputAxis.RotationX) Clutch.SourceAxis = InputAxis.RotationZ;
+            }
         }
     }
 
@@ -161,6 +171,9 @@ namespace SimsonnPedals
         public int ProductId { get; set; } = 0x6012;
 
         public uint VJoyDeviceId { get; set; } = 1;
+
+        /// <summary>A clutch pedal is connected: shape it and feed its vJoy axis too.</summary>
+        public bool ClutchEnabled { get; set; }
 
         /// <summary>Simsonn Manager install folder chosen by hand, used for firmware files; null to find it automatically.</summary>
         public string ManagerFolder { get; set; }

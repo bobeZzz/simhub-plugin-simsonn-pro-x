@@ -28,6 +28,11 @@ namespace SimsonnPedals.UI
             BrakePanel.SweepKind = SweepPedal.Brake;
             ThrottlePanel.Engine = plugin.Engine;
             ThrottlePanel.SweepKind = SweepPedal.Throttle;
+            ClutchPanel.Processor = plugin.Engine.Clutch;
+            ClutchPanel.Engine = plugin.Engine;
+            ClutchPanel.SweepKind = SweepPedal.Clutch;
+            ClutchToggle.IsChecked = plugin.Settings.ClutchEnabled;
+            ShowClutch();
 
             VJoyDeviceCombo.ItemsSource = Enumerable.Range(1, 16).Select(i => (uint)i).ToList();
             VJoyDeviceCombo.SelectedItem = plugin.Settings.VJoyDeviceId;
@@ -64,6 +69,7 @@ namespace SimsonnPedals.UI
             var preset = plugin.ActivePreset;
             BrakePanel.Config = preset.Brake;
             ThrottlePanel.Config = preset.Throttle;
+            ClutchPanel.Config = preset.Clutch;
 
             updatingPresetList = true;
             PresetCombo.ItemsSource = plugin.Settings.Presets.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToList();
@@ -97,6 +103,22 @@ namespace SimsonnPedals.UI
             RefreshModified();
             BrakePanel.Refresh(engine.DeviceConnected);
             ThrottlePanel.Refresh(engine.DeviceConnected);
+            if (plugin.Settings.ClutchEnabled) ClutchPanel.Refresh(engine.DeviceConnected);
+        }
+
+        private void OnClutchToggleClick(object sender, RoutedEventArgs e)
+        {
+            plugin.Settings.ClutchEnabled = ClutchToggle.IsChecked == true;
+            if (!plugin.Settings.ClutchEnabled && plugin.Engine.ActiveSweep == SweepPedal.Clutch) plugin.Engine.RequestSweep(SweepPedal.None);
+            plugin.RequestSave();
+            ShowClutch();
+        }
+
+        private void ShowClutch()
+        {
+            bool on = plugin.Settings.ClutchEnabled;
+            ClutchPanel.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            ClutchColumn.Width = on ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
         }
 
         private void OnPresetSelected(object sender, SelectionChangedEventArgs e)
@@ -348,8 +370,8 @@ namespace SimsonnPedals.UI
         private string SyncSourceAxes(byte[] block)
         {
             if (!PedalSettingsLayout.IsLayoutVerified(block) || !plugin.SetPedalSourceAxes(block)) return null;
-            return $"Throttle and brake now read joystick axes {(InputAxis)PedalSettingsLayout.ThrottleAxis(block)} and " +
-                   $"{(InputAxis)PedalSettingsLayout.BrakeAxis(block)} in every preset (where firmware {PedalSettingsLayout.FirmwareVersionText(block)} sends them).";
+            return $"Throttle, brake and clutch now read joystick axes {(InputAxis)PedalSettingsLayout.ThrottleAxis(block)}, " +
+                   $"{(InputAxis)PedalSettingsLayout.BrakeAxis(block)} and {(InputAxis)PedalSettingsLayout.ClutchAxis(block)} in every preset (where firmware {PedalSettingsLayout.FirmwareVersionText(block)} sends them).";
         }
 
         private void SetPedalButtonsEnabled(bool enabled) =>

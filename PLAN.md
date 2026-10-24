@@ -1,7 +1,7 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.8).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.0.15).
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -50,15 +50,15 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-24 (v1.
 | 8 | **Calibrate pedals**: live raw values from the params report (`PedalRawMonitor`), Start at rest → press → Finish; one block write (throttle raw range, brake rest, then Set up pedals); plugin calibration of all presets reset to full range. Rig run 20:46: written and verified; throttle raw −32767…−8522, brake rest −30341 → −30239, 85 kg kept, only the expected bytes changed | 1.0.8 |
 | 9 | **Firmware update** from the plugin with the Manager's own files and key (CRC-checked): main chip via SIMSONN Flasher report 5, second chip via report 7, resume from update mode, rollback file choice. Rig: 2.0.8 → 2.1.1 / 2.0.6. 2.1.x support: pedal axes and raw channels found from the block (3–5 on 2.1), presets switched to Rx/Ry; calibration on 2.1.1 verified, bars move. See [research/firmware-update.md](research/firmware-update.md) | 1.0.9–1.0.12 |
 | 3 | **Per-car and per-class presets**: automatic lookup car → class → game → Default; Save for <car> / <class>; a line shows the automatic choice and why. iRacing class read from the raw session info (`CarClassID`), since SimHub's CarClass is blank in single-class sessions. Rig-checked | 1.0.13–1.0.14 |
+| 4 | **Clutch panel**: "Clutch pedal connected" toggle (off by default); full panel (calibration, dead zone, curve, bind sweep) on vJoy Z; reads Z on 2.0.x, Rz on 2.1.x. Shaped in the plugin only: the clutch axis in the pedals is not touched by Set up / Calibrate pedals. Rig check pending | 1.0.15 |
 | F5 | Manager protocol read from its binaries (static only): report 6 commands, params report, calibration steps, kg scale per firmware, field names. See [research/manager-protocol.md](research/manager-protocol.md) | – |
 
 ## Next, in order
 1. **Brake not going to 0 when SimHub exits** (deferred by the user; vJoy keeps the last value, so a crash can leave
    the brake pressed in the sim). Zeroing in End/ProcessExit isn't enough; an earlier exit-watchdog attempt was abandoned.
-2. **Phase 4 – clutch panel** (axis 2 / HID Z), full panel like throttle and brake.
-3. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
-4. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
-5. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
+2. **Phase 5 – iRacing binding check**: warn when the game's pedals aren't bound to vJoy.
+3. **Phase 6 – exact curves**: match Simsonn Manager's curve shapes exactly.
+4. **Phase 7 – throttle cut / blip from the shift paddles**, plus cutting throttle above a brake level.
 
 ## Maybe / parked
 - **Live brake max force** (report 6 `damping_max`, sent by the Manager while the spinner moves). If it applies without

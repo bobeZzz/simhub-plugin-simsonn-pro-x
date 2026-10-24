@@ -74,6 +74,9 @@ namespace SimsonnPedals
             this.AttachDelegate("Brake.Position", () => Math.Round(Engine.Brake.Position * 100, 1));
             this.AttachDelegate("Brake.Output", () => Math.Round(Engine.Brake.Output * 100, 1));
             this.AttachDelegate("Brake.ForceKg", () => Math.Round(Engine.Brake.Position * ActivePreset.Brake.FirmwareMaxForceKg, 1));
+            this.AttachDelegate("Clutch.Raw", () => Engine.Clutch.Raw);
+            this.AttachDelegate("Clutch.Position", () => Math.Round(Engine.Clutch.Position * 100, 1));
+            this.AttachDelegate("Clutch.Output", () => Math.Round(Engine.Clutch.Output * 100, 1));
 
             this.AddAction("NextPreset", (pm, input) => CyclePreset());
         }
@@ -196,12 +199,14 @@ namespace SimsonnPedals
         {
             preset.Throttle.PropertyChanged += OnPresetEdited;
             preset.Brake.PropertyChanged += OnPresetEdited;
+            preset.Clutch.PropertyChanged += OnPresetEdited;
         }
 
         private void Untrack(PedalPreset preset)
         {
             preset.Throttle.PropertyChanged -= OnPresetEdited;
             preset.Brake.PropertyChanged -= OnPresetEdited;
+            preset.Clutch.PropertyChanged -= OnPresetEdited;
         }
 
         private void OnPresetEdited(object sender, PropertyChangedEventArgs e)
@@ -381,13 +386,15 @@ namespace SimsonnPedals
         {
             var throttle = (InputAxis)PedalSettingsLayout.ThrottleAxis(settingsBlock);
             var brake = (InputAxis)PedalSettingsLayout.BrakeAxis(settingsBlock);
+            var clutch = (InputAxis)PedalSettingsLayout.ClutchAxis(settingsBlock);
             bool changed = false;
             // A fact about the pedals, not an edit: update the saved copies too, so presets don't show as unsaved.
             foreach (var preset in Settings.Presets.Values.Concat(Settings.SavedPresets.Values))
             {
-                changed |= preset.Throttle.SourceAxis != throttle || preset.Brake.SourceAxis != brake;
+                changed |= preset.Throttle.SourceAxis != throttle || preset.Brake.SourceAxis != brake || preset.Clutch.SourceAxis != clutch;
                 preset.Throttle.SourceAxis = throttle;
                 preset.Brake.SourceAxis = brake;
+                preset.Clutch.SourceAxis = clutch;
             }
             lock (presetLock) modifiedCache.Clear();
             if (changed) Save();

@@ -18,6 +18,7 @@ namespace SimsonnPedals
 
         public static int ThrottleAxis(byte[] block) => PedalAxisBase(block);
         public static int BrakeAxis(byte[] block) => PedalAxisBase(block) + 1;
+        public static int ClutchAxis(byte[] block) => PedalAxisBase(block) + 2;
 
         private static bool IsAxisUsed(byte[] block, int axis) => block[AxisBase + AxisSize * axis + SourceMain] != SourceNone;
 
