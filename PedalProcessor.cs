@@ -45,29 +45,20 @@ namespace SimsonnPedals
             return Clamp01((points[i] + (points[i + 1] - points[i]) * t) / 100.0);
         }
 
-        /// <summary>Exponential smoothing weight for a time constant of 2 ms per filter level.</summary>
-        public static double FilterAlpha(int level, double dtMs)
-        {
-            double tau = level * 2.0;
-            if (tau <= 0 || dtMs <= 0) return 1;
-            return dtMs / (tau + dtMs);
-        }
-
         public static double Clamp01(double x) => x < 0 ? 0 : x > 1 ? 1 : x;
     }
 
-    /// <summary>Per-pedal runtime state: filter memory, calibration capture and the latest values for the UI.</summary>
+    /// <summary>Per-pedal runtime state: calibration capture and the latest values for the UI.</summary>
     public sealed class PedalProcessor
     {
-        private double filtered = double.NaN;
         private volatile bool calibrating;
 
         public int Raw { get; private set; }
 
-        /// <summary>Calibrated position, 0..1, before dead zone, curve and filter.</summary>
+        /// <summary>Calibrated position, 0..1, before dead zone and curve.</summary>
         public double Position { get; private set; }
 
-        /// <summary>Filtered, dead-zoned value fed into the curve, 0..1.</summary>
+        /// <summary>Dead-zoned value fed into the curve, 0..1.</summary>
         public double CurveInput { get; private set; }
 
         /// <summary>Final value sent to vJoy, 0..1.</summary>
@@ -96,7 +87,7 @@ namespace SimsonnPedals
 
         public void CancelCalibration() => calibrating = false;
 
-        public double Process(PedalConfig config, int raw, double dtMs)
+        public double Process(PedalConfig config, int raw)
         {
             Raw = raw;
             if (calibrating)
@@ -109,13 +100,7 @@ namespace SimsonnPedals
             Position = x;
             x = PedalMath.ApplyMaxForce(x, config.FirmwareMaxForceKg, config.MaxForceKg);
 
-            // Smooth the sensor signal before shaping so the curve sees a clean input.
-            if (config.FilterEnabled && !double.IsNaN(filtered))
-                filtered += (x - filtered) * PedalMath.FilterAlpha(config.FilterLevel, dtMs);
-            else
-                filtered = x;
-
-            CurveInput = PedalMath.ApplyDeadzone(filtered, config.DeadzoneLow, config.DeadzoneHigh);
+            CurveInput = PedalMath.ApplyDeadzone(x, config.DeadzoneLow, config.DeadzoneHigh);
             Output = PedalMath.EvaluateCurve(config.CurvePoints, CurveInput);
             return Output;
         }

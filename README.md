@@ -1,7 +1,7 @@
 # SIMSONN Pedals (SimHub plugin)
 
 Throttle and brake shaping for the SIMSONN Pro X Ultra (USB `VID_DDFD` / `PID_6012`) inside SimHub.
-The plugin reads the pedals, applies calibration → filter → dead zone → curve, and writes the result to a vJoy device.
+The plugin reads the pedals, applies calibration → dead zone → curve, and writes the result to a vJoy device.
 
 ## Rig setup (once)
 1. Install the vJoy driver (2.1.9.1). In **Configure vJoy**, enable device 1 with at least the X and Y axes.
@@ -11,7 +11,7 @@ The plugin reads the pedals, applies calibration → filter → dead zone → cu
 
 ## Behaviour
 - Throttle reads axis X and brake reads axis Y of the pedal base. Change this under **Axis mapping** if needed.
-- The filter is exponential smoothing with a time constant of 2 ms per level (level 2 adds about 4 ms).
+- There is no smoothing filter: the output follows the pedal with no added delay.
 - Each game can have its own preset, named after the game in SimHub (e.g. `IRacing`). When **auto switch** is on, the plugin applies it when the game changes and falls back to `Default` otherwise.
 - SimHub properties: `SimsonnPedalsPlugin.Throttle.Output`, `.Brake.Output`, `.Throttle.Raw`, `.DeviceConnected`, `.VJoyStatus`, `.ActivePreset`.
 - `NextPreset` action can be mapped to a wheel button.

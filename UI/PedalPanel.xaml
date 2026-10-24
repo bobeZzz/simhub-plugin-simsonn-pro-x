@@ -74,19 +74,6 @@
             </WrapPanel>
             <local:CurveEditor x:Name="Curve" Height="260" />
 
-            <!-- Filter -->
-            <Grid Margin="0,10,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition />
-                    <ColumnDefinition Width="40" />
-                </Grid.ColumnDefinitions>
-                <styles:SHToggleCheckbox IsChecked="{Binding FilterEnabled, Mode=TwoWay}" Content="Filter" Width="100" VerticalAlignment="Center" />
-                <Slider Grid.Column="1" Minimum="1" Maximum="10" IsSnapToTickEnabled="True" TickFrequency="1"
-                        IsEnabled="{Binding FilterEnabled}" Value="{Binding FilterLevel, Mode=TwoWay}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Text="{Binding FilterLevel}" TextAlignment="Right" VerticalAlignment="Center" />
-            </Grid>
-
             <!-- Max force (load cell only) -->
             <StackPanel x:Name="MaxForceSection" Visibility="Collapsed">
                 <TextBlock Style="{StaticResource Caption}" Text="Max force (kg)" />

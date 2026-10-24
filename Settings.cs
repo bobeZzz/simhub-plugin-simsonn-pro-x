@@ -49,8 +49,6 @@ namespace SimsonnPedals
         private double deadzoneHigh = 100;
         private CurveShape curveShape = CurveShape.Linear;
         private double[] curvePoints = CurvePresets.Get(CurveShape.Linear);
-        private bool filterEnabled;
-        private int filterLevel = 2;
         private VJoyAxis outputAxis;
         private double firmwareMaxForceKg;
         private double maxForceKg;
@@ -74,11 +72,6 @@ namespace SimsonnPedals
             get => curvePoints;
             set => Set(ref curvePoints, NormalizeCurve(value));
         }
-
-        public bool FilterEnabled { get => filterEnabled; set => Set(ref filterEnabled, value); }
-
-        /// <summary>1-10. Each level adds 2 ms to the smoothing time constant.</summary>
-        public int FilterLevel { get => filterLevel; set => Set(ref filterLevel, Clamp(value, 1, 10)); }
 
         public VJoyAxis OutputAxis { get => outputAxis; set => Set(ref outputAxis, value); }
 

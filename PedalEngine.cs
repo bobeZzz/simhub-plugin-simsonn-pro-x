@@ -105,7 +105,6 @@ namespace SimsonnPedals
             double nextAttachedCheckMs = 0;
             double seenSinceMs = -1;
             bool replugged = false;
-            double lastMs = 0;
             double rateWindowStart = 0;
             int rateCount = 0;
 
@@ -196,7 +195,6 @@ namespace SimsonnPedals
                                 continue;
                             }
                             DeviceConnected = true;
-                            lastMs = now;
                         }
 
                         reportSignal.WaitOne(ReportWaitMs);
@@ -216,14 +214,12 @@ namespace SimsonnPedals
                         RawAxes = $"X {state.X}  Y {state.Y}  Z {state.Z}  Rx {state.RotationX}  Ry {state.RotationY}  Rz {state.RotationZ}  S0 {state.Sliders[0]}  S1 {state.Sliders[1]}";
 
                         now = clock.Elapsed.TotalMilliseconds;
-                        double dt = now - lastMs;
-                        lastMs = now;
 
                         var preset = activePreset;
                         if (preset == null) continue;
 
-                        double throttle = Throttle.Process(preset.Throttle, ReadAxis(state, preset.Throttle.SourceAxis), dt);
-                        double brake = Brake.Process(preset.Brake, ReadAxis(state, preset.Brake.SourceAxis), dt);
+                        double throttle = Throttle.Process(preset.Throttle, ReadAxis(state, preset.Throttle.SourceAxis));
+                        double brake = Brake.Process(preset.Brake, ReadAxis(state, preset.Brake.SourceAxis));
 
                         int request = sweepRequest;
                         if (request != 0)

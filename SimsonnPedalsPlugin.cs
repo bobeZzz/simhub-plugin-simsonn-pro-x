@@ -9,7 +9,7 @@ using SimHub.Plugins;
 
 namespace SimsonnPedals
 {
-    [PluginDescription("Dead zones, response curves, filtering and calibration for the SIMSONN Pro X Ultra throttle and brake, output through vJoy.")]
+    [PluginDescription("Dead zones, response curves and calibration for the SIMSONN Pro X Ultra throttle and brake, output through vJoy.")]
     [PluginAuthor("bobeZzz")]
     [PluginName("SIMSONN Pedals")]
     public class SimsonnPedalsPlugin : IPlugin, IDataPlugin, IWPFSettingsV2
