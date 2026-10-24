@@ -1,0 +1,6 @@
+Result: Joystick reports: 500/s, longest gap 4 ms normally. Settings read (677 ms): longest silence 2074 ms (from +1 ms after it began). Write (340 ms): longest silence 2050 ms (from +2 ms after it began). Write: Written.
+SIMSONN direct mode test (D3): joystick pause during a read and a write, 2026-10-24 23:57:52
+Read 2001–2677 ms, write 4178–4518 ms, end 8518 ms
+2200 joystick reports, first 2 ms, last 8520 ms. Silences of 15 ms or more (from, length):
+     2002 ms: 2074 ms
+     4180 ms: 2050 ms

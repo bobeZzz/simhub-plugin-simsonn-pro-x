@@ -110,6 +110,23 @@ the read began (the read itself took 681 ms, so the pause outlasts it by 1.4 s).
 1.8 s. The 1.0.21 summary ("longest gap 3 ms / 2 ms") was wrong: it only looked at gaps that started and ended
 inside the read/write span. 1.0.22 measures silences that overlap the span and listens 4 s after the write.
 
+### 1.0.22 rerun (23:58) and the firmware's pause timer
+Measured properly: reports at 500/s; a settings read silenced them for **2074 ms** from +1 ms, the write for
+**2050 ms** from +2 ms; then they came back by themselves. Both the same length, so it isn't flash time.
+
+Firmware 2.1.1, USB handler `0x08012ac0`: for every incoming report it sets the joystick report timer (`0x200012a0`)
+to `millis() + 2000` (report 6 commands: `+ 200`; report 2 params: untouched). The joystick sender (`0x08017b24`)
+sends only once `millis() − timer ≥ exchange period`. So **any config packet (reads 3, writes 4, flash 5) holds
+joystick reports for 2 s after the last packet; report 6 commands hold them 200 ms; params requests don't.** This is
+FreeJoy's "configurator connected" pause, built into the firmware: a settings write can't avoid it. The game sees the
+last values held for those 2 s (a pressed brake stays pressed).
+
+Consequences:
+- **D4:** write the block only when it can't matter: car stopped (in the pits or garage, or not on track) and both
+  pedals released. Hold a pending write until then.
+- `damping_max` (brake "100% at") and `brakeCutoff` cost only 200 ms: those can follow edits more freely (D5).
+- Reads cost 2 s too: direct mode already reads only once (start, replug, after other pedal operations).
+
 So far: **reads and writes both pause the pedals' joystick reports for about 2 s**, even though the pedals stay
 connected and the settings apply live. Not felt as a dropout when switching presets while driving, but a 2 s
 freeze at the wrong moment matters: D4 should write only while the car is stopped (pits, garage) or not on track.

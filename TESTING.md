@@ -53,12 +53,6 @@ Every new release adds its checks here.
 - [ ] Paddle-to-cut delay feels fine (SimHub reads the paddles, then the plugin). If the cut lands late, say so.
 - [ ] Old presets load with all three off and aren't marked unsaved.
 
-### 1.0.22 – Write pause test, measured properly
-- [ ] **Write pause test** again (hold the brake lightly ~12 s). Send the result line and
-      `direct-test-*-write-pause.txt`. 1.0.21's summary missed the silences: its raw data shows the pedals stopping
-      for about 2.1 s from the start of a settings read, and going quiet at the write without coming back before the
-      test ended. This version listens 4 s longer and reports each silence in full.
-
 ### 1.0.21 – Direct mode (D3, no vJoy)
 - [ ] Restart SimHub in direct mode: it reads the pedals once (about 2 s pause) and says the pedals hold the preset.
 
@@ -71,6 +65,8 @@ Every new release adds its checks here.
       to vJoy instead.
 
 ## Passed
+- 1.0.22 – Write pause test, 2026-10-24: a settings read freezes the pedals' joystick reports for 2074 ms, a write for
+  2050 ms, then they come back (a firmware timer, see research/direct-mode.md).
 - 1.0.21 – Direct mode, 2026-10-24: switched on, the pedals got the preset; iRacing bound to the pedals felt the same
   as vJoy mode; edit + Save reached the game; preset switch while driving with no dropout noticed; back to vJoy wrote
   the pedals neutral (85 kg kept) and vJoy mode works. (The neutral message stayed amber: fixed in 1.0.22.)

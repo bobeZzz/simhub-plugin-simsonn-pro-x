@@ -108,9 +108,10 @@ and reload the settings live (see [research/direct-mode.md](research/direct-mode
    when nothing changes (no needless restart or flash write). Writes happen on **Write to pedals**, on Save, and on an
    automatic preset switch while no game is running. Status line: which preset the pedals hold, and since when.
    Leaving direct mode offers Set up pedals, so vJoy mode gets neutral pedals again.
-4. **D4 – Per car while a game runs**, depending on D1. If writes apply live without a drop (as the firmware code
-   says): write on car change, preferably while stopped (pits or garage) so the feel doesn't change mid-corner. If
-   the pedals drop off and iRacing doesn't cope: switch per game only, and say per-car presets need vJoy mode.
+4. **D4 – Write only when it's safe.** Measured (1.0.22): every settings read or write freezes the pedals' joystick
+   reports for 2 s, a fixed firmware timer (`millis() + 2000` on every config packet; 200 ms for report 6
+   commands). So while a game runs, hold a pending write until the car is stopped (pits, garage, or not on track)
+   and both pedals are released, then write; say on the page that it's waiting. Outside a game, write at once.
 5. **D5 – Live edits.** Dragging a curve point in direct mode would mean one restart per change: edits stay in the
    plugin (bars show the result) and go to the pedals on Save / Write to pedals, with an "Edits not in the pedals
    yet" marker. Brake cut (and max force, if D1 allows) go live.
