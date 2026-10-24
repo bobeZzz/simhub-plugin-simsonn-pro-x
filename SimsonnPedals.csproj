@@ -10,7 +10,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <!-- The release script sets this; the updater compares it with the newest GitHub release tag. -->
-    <Version>1.0.7</Version>
+    <Version>1.0.8</Version>
     <Nullable>disable</Nullable>
     <SimHubPath Condition="'$(SIMHUB_INSTALL_PATH)' != ''">$(SIMHUB_INSTALL_PATH)</SimHubPath>
     <SimHubPath Condition="'$(SimHubPath)' == ''">D:\stasiks\</SimHubPath>
