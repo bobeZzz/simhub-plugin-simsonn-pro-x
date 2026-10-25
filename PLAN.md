@@ -1,7 +1,7 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.0.24).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.0.25).
 
 ## Where we stopped (2026-10-25)
 - **Direct mode (no vJoy) is complete**: D1–D3 checked on the rig (1.0.20–1.0.22); D4–D6 built in 1.0.23, rig
@@ -10,6 +10,9 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.
   (1.0.15–1.0.19 and older). Fixes from those come next; nothing else is planned.
 - **1.0.24 reorganised the page** into a status + active preset header and tabs (Pedals, Shift assist, Presets,
   Output and game, Pedal setup, Updates); rig look-over pending in TESTING.md.
+- **Author is bobeZzz everywhere** (2026-10-25): git history rewritten and force-pushed (main + all tags); releases
+  1.0.0–1.0.24 deleted (their DLLs carried the real name), their tags kept; 1.0.25 is the only release. Never put the
+  real name in code, docs, commits or releases.
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -87,9 +90,6 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.
 1. **Rig check 1.0.23** (direct mode D4–D6), see TESTING.md.
 2. **Rig checks still open from the vJoy phases**, below.
 3. Fixes from both. Nothing else planned; ideas under Maybe / parked.
-4. **TODO: remove the old releases (1.0.0–1.0.24).** Their DLLs still carry the author's real name (the
-   `PluginAuthor` attribute; git history was rewritten to bobeZzz on 2026-10-25, tags force-pushed). Do it once a
-   newer release (1.0.25+) is out so the updater always has a latest release; deleting a release keeps its tag.
 
 ### Rig checks still open (vJoy phases)
 Listed in [TESTING.md](TESTING.md): clutch panel (1.0.15), exit guard (1.0.16), binding check (1.0.17), Manager import
