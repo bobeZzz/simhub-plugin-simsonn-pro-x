@@ -87,6 +87,9 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.
 1. **Rig check 1.0.23** (direct mode D4–D6), see TESTING.md.
 2. **Rig checks still open from the vJoy phases**, below.
 3. Fixes from both. Nothing else planned; ideas under Maybe / parked.
+4. **TODO: remove the old releases (1.0.0–1.0.24).** Their DLLs still carry the author's real name (the
+   `PluginAuthor` attribute; git history was rewritten to bobeZzz on 2026-10-25, tags force-pushed). Do it once a
+   newer release (1.0.25+) is out so the updater always has a latest release; deleting a release keeps its tag.
 
 ### Rig checks still open (vJoy phases)
 Listed in [TESTING.md](TESTING.md): clutch panel (1.0.15), exit guard (1.0.16), binding check (1.0.17), Manager import
