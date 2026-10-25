@@ -85,7 +85,7 @@ namespace SimsonnPedals.UI
                 SweepButton.Content = mine ? "Stop" : "Move vJoy axis";
                 SweepButton.IsEnabled = connected && Engine.VJoyReady;
                 SweepText.Text = !Engine.VJoyReady
-                    ? "Needs vJoy (see the status at the top)."
+                    ? "Needs vJoy (see the vJoy line at the top of the page)."
                     : mine && Engine.SweepCountdownSeconds > 0
                         ? $"Starting in {Math.Ceiling(Engine.SweepCountdownSeconds)} s; switch to the game now and don't touch the pedals."
                         : mine
@@ -95,16 +95,18 @@ namespace SimsonnPedals.UI
 
             // The binding sweep moves a vJoy axis; in direct mode the game binds to the pedals themselves.
             var bindVisibility = DirectMode ? Visibility.Collapsed : Visibility.Visible;
-            if (BindRow.Visibility != bindVisibility) BindCaption.Visibility = BindRow.Visibility = bindVisibility;
+            if (BindRow.Visibility != bindVisibility)
+                BindCaption.Visibility = BindRow.Visibility = OutputAxisLabel.Visibility = OutputAxisCombo.Visibility = bindVisibility;
             CalibrateButton.IsEnabled = !DirectMode || Processor.IsCalibrating;
             if (DirectMode && !Processor.IsCalibrating)
             {
                 CalibrateButton.Content = "Calibrate";
-                CalibrationText.Text = "In direct mode use Calibrate pedals (Pedal firmware settings).";
+                CalibrationText.Text = "In direct mode use Calibrate pedals on the Pedal setup tab.";
             }
             else if (Processor.IsCalibrating)
             {
                 CalibrateButton.Content = "Finish";
+                SetupExpander.IsExpanded = true;
                 CalibrationText.Text = $"Press the pedal fully a few times. Seen {Processor.CalibrationSeenMin} – {Processor.CalibrationSeenMax}";
             }
             else

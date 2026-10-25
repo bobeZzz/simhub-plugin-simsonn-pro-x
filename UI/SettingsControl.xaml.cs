@@ -92,6 +92,9 @@ namespace SimsonnPedals.UI
                 ? $"Pedals: {engine.DeviceName} connected ({engine.UpdateRate:0} updates/s)"
                 : $"Pedals: not found (looking for VID_{plugin.Settings.VendorId:X4} PID_{plugin.Settings.ProductId:X4})";
             VJoyStatusText.Text = "vJoy: " + engine.VJoyStatus;
+            // In vJoy mode it keeps only the result of leaving direct mode, if there was one.
+            var directVisibility = DirectStatusText.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (DirectStatusText.Visibility != directVisibility) DirectStatusText.Visibility = directVisibility;
             RawAxesText.Text = engine.DeviceConnected ? "Raw axes: " + engine.RawAxes : "";
 
             var game = plugin.CurrentGameName;
@@ -203,13 +206,15 @@ namespace SimsonnPedals.UI
             bool direct = plugin.Settings.OutputMode == OutputMode.Direct;
             WriteToPedalsButton.Visibility = direct ? Visibility.Visible : Visibility.Collapsed;
             OutputNoteText.Text = direct
-                ? "Direct mode: the pedals do the shaping and the game is bound to them. The bars show what the pedals send. Calibrate with Calibrate pedals (below), not the panels' Calibrate."
+                ? "Direct mode: the pedals do the shaping and the game is bound to them. The bars show what the pedals send. Calibrate with Calibrate pedals on the Pedal setup tab, not the panels' Calibrate."
                 : "vJoy mode: the plugin shapes the pedals and feeds vJoy; bind the game to vJoy.";
             // Direct mode: vJoy-only parts go; the brake cut stays, done by the pedals.
             var vjoyOnly = direct ? Visibility.Collapsed : Visibility.Visible;
-            VJoyStatusText.Visibility = PaddleStatus.Visibility = ShiftGrid.Visibility = ShiftTestPanel.Visibility = AssistIntroText.Visibility = vjoyOnly;
+            VJoyStatusText.Visibility = VJoyDeviceRow.Visibility = PaddleStatus.Visibility = ShiftGrid.Visibility =
+                ShiftTestPanel.Visibility = AssistIntroText.Visibility = vjoyOnly;
             DirectAssistNote.Visibility = direct ? Visibility.Visible : Visibility.Collapsed;
             AssistSection.Title = direct ? "THROTTLE CUT WHEN BRAKING" : "THROTTLE CUT AND BLIP";
+            AssistTab.Header = direct ? "Brake cut" : "Shift assist";
             HowToBindText.Text = direct
                 ? "Direct mode: bind throttle and brake (and clutch) to the SIMSONN pedals themselves in iRacing. The pedals hold the active preset, also with SimHub closed."
                 : "Bind throttle and brake to the vJoy device in iRacing. Set the pedals to a linear curve, 0 dead zone and no filter in Simsonn Manager so the shaping isn't applied twice.";
@@ -1054,6 +1059,7 @@ namespace SimsonnPedals.UI
                     message = $"Version {current}.";
             }
             UpdateStatusText.Text = message;
+            UpdatesTab.Header = available ? "Update available" : plugin.PendingUpdateVersion != null ? "Updates (restart)" : "Updates";
         }
 
         private async void CheckForUpdates(bool quiet)

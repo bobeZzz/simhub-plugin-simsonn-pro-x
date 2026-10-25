@@ -1,13 +1,15 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.0.23).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.0.24).
 
 ## Where we stopped (2026-10-25)
 - **Direct mode (no vJoy) is complete**: D1–D3 checked on the rig (1.0.20–1.0.22); D4–D6 built in 1.0.23, rig
   check pending. Firmware 2.1.1 on the rig.
 - **Next: rig checks** in [TESTING.md](TESTING.md): 1.0.23 (direct mode D4–D6) first, then the vJoy phases
   (1.0.15–1.0.19 and older). Fixes from those come next; nothing else is planned.
+- **1.0.24 reorganised the page** into a status + active preset header and tabs (Pedals, Shift assist, Presets,
+  Output and game, Pedal setup, Updates); rig look-over pending in TESTING.md.
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -32,7 +34,7 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.
   diff each read against the previous one.
 
 ## Decisions (keep unless the user changes them)
-- Two output modes, chosen on the page (**Output**): **vJoy** (the plugin shapes, the game binds to vJoy) and
+- Two output modes, chosen on the page (**Output and game** tab): **vJoy** (the plugin shapes, the game binds to vJoy) and
   **direct** (the plugin writes the preset into the pedals' own settings, the game binds to the pedals). vJoy mode
   stays as it was; direct mode is not a replacement.
 - vJoy mode: shaping (dead zone, curve, max force scaling) happens **live in the plugin**; the pedals are set up once
@@ -44,7 +46,7 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.
 - Presets: automatic lookup car → class → game → Default.
 - Edits apply immediately and are autosaved, but stay "unsaved" until **Save**; **Revert** returns to the last Save.
 - Brake: "Pedal max" = max force stored in the pedals; "100% at" = the user's real 100%.
-- GIF at the top right of the page. Ignore interface language, the dashboard and housekeeping features.
+- GIF at the top left of the page, in the status header. Ignore interface language, the dashboard and housekeeping features.
 - Throttle cut in vJoy mode is done by the plugin (phase 7) and the firmware's own (`brakeCutoff`) is kept off, so the
   pedals never cut throttle behind the plugin's back. In direct mode the firmware's is the one to use (D5).
 - Elastomer (report 6 `damping_type`) is not supported: in the Manager it only caps the max force (60 / 100 / 140 kg)
@@ -79,6 +81,7 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.
 | D4 | **Safe writes**: while a game runs, reads and writes wait until the car is stopped (< 1 km/h) and throttle and brake are released; amber "Waiting to send … (the car is moving / release throttle and brake)"; sent from SimHub's data loop once safe. Rig check pending | 1.0.23 |
 | D5 | **Live brake and brake cut**: brake "100% at" edits go out half a second after the last change with `damping_max` (0.2 s pause) when only the brake's high end changes; the preset's "Cut throttle when braking" is the firmware's `brakeCutoff` in direct mode (capped at 50 %), sent with each pass; leaving direct mode switches it off. Offline: only the brake's centre/high end bytes change; display bytes (+34/+35) ignored when comparing. Rig check pending | 1.0.23 |
 | D6 | **Page and binding check**: direct mode hides the vJoy status, the panels' "Bind in game" row and the shift cut / blip rows (brake cut row stays, with a note); the binding check expects each pedal on the SIMSONN pedals' own axis (Rx/Ry/Rz on 2.1.x) and names vJoy or wrong-axis bindings. Offline on synthetic controls.cfg. Rig check pending | 1.0.23 |
+| UI | **Page layout**: fixed header with pedal / vJoy / direct / binding status and the active preset (Save, Revert, unsaved and automatic-choice lines); tabs Pedals, Shift assist (Brake cut in direct mode), Presets, Output and game, Pedal setup (pedal settings, firmware, tests folded away), Updates ("Update available" in the tab name). Pedal panels follow the signal chain: live bars, force, dead zone, curve; calibration, bind and axes in a "Calibration and binding" expander. Rendered offline with SimHub's styles; rig look-over pending | 1.0.24 |
 
 ## Next, in order
 1. **Rig check 1.0.23** (direct mode D4–D6), see TESTING.md.

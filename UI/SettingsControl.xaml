@@ -3,247 +3,377 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:styles="clr-namespace:SimHub.Plugins.Styles;assembly=SimHub.Plugins"
              xmlns:local="clr-namespace:SimsonnPedals.UI">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel>
+    <UserControl.Resources>
+        <!-- Explanations under a heading or a row of controls. -->
+        <Style TargetType="TextBlock" x:Key="Hint">
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <!-- Results of an action, shown under its buttons. -->
+        <Style TargetType="TextBlock" x:Key="Status">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+        </Style>
+        <!-- Label in front of a field. -->
+        <Style TargetType="TextBlock" x:Key="Label">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+        <Style TargetType="TextBlock" x:Key="Heading">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,14,0,4" />
+        </Style>
+        <Style TargetType="WrapPanel" x:Key="Row">
+            <Setter Property="Margin" Value="0,4,0,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+
+        <!-- Always visible: is everything working, and which preset is in use. -->
+        <Border BorderBrush="#33FFFFFF" BorderThickness="0,0,0,1" Padding="8,6,8,10">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <styles:SHSection Title="SIMSONN PRO X ULTRA" ShowSeparator="True">
+                <local:GifImage ResourceName="SimsonnPedals.header.gif" Width="84" Height="84" VerticalAlignment="Top" />
+
+                <StackPanel Grid.Column="1" Margin="14,0,16,0">
+                    <TextBlock Text="SIMSONN PRO X ULTRA" FontSize="11" Opacity="0.6" />
+                    <TextBlock x:Name="DeviceStatusText" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,0" />
+                    <TextBlock x:Name="VJoyStatusText" Margin="0,3,0,0" TextWrapping="Wrap" />
+                    <TextBlock x:Name="DirectStatusText" Margin="0,3,0,0" TextWrapping="Wrap" Visibility="Collapsed" />
+                    <TextBlock x:Name="IRacingBindingText" Margin="0,3,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Border Grid.Column="2" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="4" Padding="10,6" Width="460" VerticalAlignment="Top">
                     <StackPanel>
-                        <TextBlock x:Name="DeviceStatusText" FontWeight="SemiBold" />
-                        <TextBlock x:Name="VJoyStatusText" Margin="0,2,0,0" />
-                        <TextBlock x:Name="IRacingBindingText" Margin="0,2,0,0" TextWrapping="Wrap" />
-                        <TextBlock x:Name="RawAxesText" Margin="0,2,0,0" Opacity="0.6" FontFamily="Consolas" />
-                        <WrapPanel Margin="0,6,0,0">
-                            <styles:SHButtonSecondary Click="OnReconnectClick"
-                                                      ToolTip="Close and reopen the pedals, as if the USB cable had been replugged">Reconnect pedals</styles:SHButtonSecondary>
-                            <styles:SHButtonSecondary Click="OnCheckBindingsClick"
-                                                      ToolTip="Reads iRacing's saved controls and checks that throttle, brake (and clutch) are bound to the plugin's vJoy axes (in direct mode: to the pedals' own axes). Rechecked automatically whenever iRacing saves its controls.">Check iRacing bindings</styles:SHButtonSecondary>
-                        </WrapPanel>
-                        <TextBlock x:Name="HowToBindText" Margin="0,6,0,0" Opacity="0.7" TextWrapping="Wrap" />
+                        <TextBlock Text="ACTIVE PRESET" FontSize="11" Opacity="0.6" />
+                        <DockPanel Margin="0,4,0,0">
+                            <styles:SHButtonSecondary x:Name="RevertButton" DockPanel.Dock="Right" Click="OnRevertClick"
+                                                      ToolTip="Go back to this preset's last Save">Revert</styles:SHButtonSecondary>
+                            <styles:SHButtonPrimary x:Name="SaveButton" DockPanel.Dock="Right" Click="OnSaveClick"
+                                                    ToolTip="Keep the current values; Revert comes back to them">Save</styles:SHButtonPrimary>
+                            <ComboBox x:Name="PresetCombo" SelectionChanged="OnPresetSelected" Margin="0,0,8,0" VerticalContentAlignment="Center" />
+                        </DockPanel>
+                        <TextBlock x:Name="ModifiedText" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="#FFE0A030" />
+                        <TextBlock x:Name="AutoPresetText" Margin="0,4,0,0" TextWrapping="Wrap" Opacity="0.7" />
                     </StackPanel>
-                </styles:SHSection>
-                <local:GifImage Grid.Column="1" ResourceName="SimsonnPedals.header.gif" Width="112" Height="112"
-                                VerticalAlignment="Top" Margin="12,4,8,0" />
+                </Border>
             </Grid>
+        </Border>
 
-            <styles:SHSection Title="OUTPUT" ShowSeparator="True">
-                <StackPanel>
-                    <WrapPanel>
-                        <TextBlock Text="The game gets the pedals" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <ComboBox x:Name="OutputModeCombo" Width="360" SelectionChanged="OnOutputModeChanged" Margin="0,0,8,0">
-                            <ComboBoxItem Content="through vJoy (shaped in the plugin)" />
-                            <ComboBoxItem Content="directly (shaped inside the pedals, no vJoy)" />
-                        </ComboBox>
-                        <styles:SHButtonSecondary x:Name="WriteToPedalsButton" Click="OnWriteToPedalsClick"
-                                                  ToolTip="Reads the pedals' settings and writes the active preset as it is now (unsaved edits too) if they differ">Write to pedals</styles:SHButtonSecondary>
-                    </WrapPanel>
-                    <TextBlock x:Name="DirectStatusText" Margin="0,6,0,0" TextWrapping="Wrap" />
-                    <TextBlock x:Name="OutputNoteText" Margin="0,4,0,0" Opacity="0.7" TextWrapping="Wrap" />
-                </StackPanel>
-            </styles:SHSection>
+        <styles:SHTabControl Grid.Row="1" Margin="0,6,0,0">
 
-            <styles:SHSection Title="PRESETS" ShowSeparator="True">
-                <StackPanel>
-                    <WrapPanel>
-                        <TextBlock Text="Active preset" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <ComboBox x:Name="PresetCombo" Width="200" SelectionChanged="OnPresetSelected" Margin="0,0,8,0" />
-                        <styles:SHButtonSecondary x:Name="DeleteButton" Click="OnDeleteClick">Delete</styles:SHButtonSecondary>
-                        <styles:SHButtonPrimary x:Name="SaveButton" Click="OnSaveClick"
-                                                ToolTip="Keep the current values; Revert comes back to them">Save</styles:SHButtonPrimary>
-                        <styles:SHButtonSecondary x:Name="RevertButton" Click="OnRevertClick"
-                                                  ToolTip="Go back to this preset's last Save">Revert</styles:SHButtonSecondary>
-                    </WrapPanel>
-                    <TextBlock x:Name="ModifiedText" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#FFE0A030" />
-                    <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="Save as" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <TextBox x:Name="NewPresetName" Width="200" VerticalContentAlignment="Center" Margin="0,0,8,0" />
-                        <styles:SHButtonSecondary Click="OnSaveAsClick">Save as</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary x:Name="SaveForCarButton" Click="OnSaveForCarClick"
-                                                  ToolTip="Save the current values as a preset named after this car; it's picked whenever you drive this car">Save for this car</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary x:Name="SaveForClassButton" Click="OnSaveForClassClick"
-                                                  ToolTip="Save the current values as a preset for this car's class; it's picked for every car in the class without its own preset">Save for this class</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary x:Name="SaveForGameButton" Click="OnSaveForGameClick">Save for current game</styles:SHButtonSecondary>
-                    </WrapPanel>
-                    <styles:SHToggleCheckbox x:Name="AutoApplyToggle" Margin="0,8,0,0" Click="OnAutoApplyClick">
-                        Switch preset automatically: this car's preset, else its class, else the game's, else Default
-                    </styles:SHToggleCheckbox>
-                    <TextBlock x:Name="AutoPresetText" Margin="0,4,0,0" TextWrapping="Wrap" Opacity="0.7" />
-                    <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="Simsonn Manager settings" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <styles:SHButtonSecondary x:Name="ImportManagerFileButton" Click="OnImportManagerFileClick"
-                                                  ToolTip="Loads dead zones, curves and the brake's 100% force from a Simsonn Manager preset file (etc\device\&lt;name&gt;\pedal.cfg) into the active preset, so the pedals respond exactly as they did with it. Revert undoes it.">Import Manager preset…</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary x:Name="ImportPedalsButton" Click="OnImportPedalsClick"
-                                                  ToolTip="Same, from the settings stored in the pedals (useful before Set up pedals replaces them). The pedals stop responding for about 2 seconds.">Import from pedals</styles:SHButtonSecondary>
-                    </WrapPanel>
-                    <TextBlock x:Name="ImportStatus" Margin="0,4,0,0" TextWrapping="Wrap" />
-                    <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="vJoy device" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <ComboBox x:Name="VJoyDeviceCombo" Width="60" SelectionChanged="OnVJoyDeviceChanged" />
-                    </WrapPanel>
-                </StackPanel>
-            </styles:SHSection>
+            <!-- ============ The pedals: what each one does ============ -->
+            <styles:SHTabItem Header="Pedals">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="4,8,4,8">
+                        <DockPanel Margin="4,0,4,4">
+                            <styles:SHToggleCheckbox x:Name="ClutchToggle" DockPanel.Dock="Right" Click="OnClutchToggleClick"
+                                                     ToolTip="Shape the clutch here too and send it to its own vJoy axis (Z unless changed in its Axis mapping)">
+                                Clutch pedal connected
+                            </styles:SHToggleCheckbox>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0" VerticalAlignment="Center"
+                                       Text="Changes apply at once and belong to the active preset (top right): Save keeps them." />
+                        </DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="ClutchColumn" Width="0" />
+                                <ColumnDefinition />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <local:PedalPanel x:Name="ClutchPanel" Title="Clutch" Visibility="Collapsed" />
+                            <local:PedalPanel x:Name="BrakePanel" Grid.Column="1" Title="Brake" ShowMaxForce="True" />
+                            <local:PedalPanel x:Name="ThrottlePanel" Grid.Column="2" Title="Throttle" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </styles:SHTabItem>
 
-            <styles:SHSection Title="PEDAL FIRMWARE SETTINGS" ShowSeparator="True">
-                <StackPanel>
-                    <TextBlock Opacity="0.7" TextWrapping="Wrap"
-                               Text="Read downloads the settings stored in the pedals to a file, without changing anything. The pedals stop responding for about 2 seconds while it runs, so don't use it while driving." />
-                    <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="Label (optional)" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <TextBox x:Name="DumpLabel" Width="220" VerticalContentAlignment="Center" Margin="0,0,8,0"
-                                 ToolTip="Describe the one change you made, e.g. brake deadzone start 10" />
-                        <styles:SHButtonSecondary x:Name="ReadPedalSettingsButton" Click="OnReadPedalSettingsClick">Read pedal settings</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary Click="OnOpenDumpFolderClick">Open folder</styles:SHButtonSecondary>
-                    </WrapPanel>
-                    <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="Brake max force in the pedals (kg)" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <TextBox x:Name="SetupMaxForceBox" Width="60" VerticalContentAlignment="Center" Margin="0,0,8,0"
-                                 ToolTip="Force at which the pedals report 100% brake. Set it above your hardest press; choose your real 100% with the brake panel's '100% at'." />
-                        <styles:SHButtonPrimary x:Name="SetupPedalsButton" Click="OnSetupPedalsClick"
-                                                ToolTip="Writes linear curves, no dead zone, filter off and this max force to the pedals, so all shaping happens here">Set up pedals</styles:SHButtonPrimary>
-                    </WrapPanel>
-                    <WrapPanel Margin="0,8,0,0">
-                        <styles:SHButtonPrimary x:Name="CalibratePedalsButton" Click="OnCalibratePedalsClick"
-                                                ToolTip="Calibrates the pedals themselves (rest and full press), like Simsonn Manager's Calibrate, then sets them up like Set up pedals">Calibrate pedals</styles:SHButtonPrimary>
-                        <styles:SHButtonPrimary x:Name="CalibrationStartButton" Click="OnCalibrationStartClick" Visibility="Collapsed">Start</styles:SHButtonPrimary>
-                        <styles:SHButtonPrimary x:Name="CalibrationFinishButton" Click="OnCalibrationFinishClick" Visibility="Collapsed">Finish</styles:SHButtonPrimary>
-                        <styles:SHButtonSecondary x:Name="CalibrationCancelButton" Click="OnCalibrationCancelClick" Visibility="Collapsed">Cancel</styles:SHButtonSecondary>
-                        <TextBlock x:Name="CalibrationLive" VerticalAlignment="Center" Margin="8,0,0,0" FontFamily="Consolas" />
-                    </WrapPanel>
-                    <WrapPanel Margin="0,8,0,0">
-                        <styles:SHButtonSecondary x:Name="RewriteTestButton" Click="OnRewriteTestClick"
-                                                  ToolTip="Reads the settings, writes the same bytes back to the pedals and checks them. Changes nothing.">Rewrite test</styles:SHButtonSecondary>
-                        <TextBlock VerticalAlignment="Center" Opacity="0.7" TextWrapping="Wrap" Margin="4,0,0,0"
-                                   Text="Tests writing to the pedals by saving their own settings back unchanged. Close Simsonn Manager first." />
-                    </WrapPanel>
-                    <TextBlock x:Name="PedalSettingsStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
+            <!-- ============ Throttle cut and blip (saved with the preset) ============ -->
+            <styles:SHTabItem x:Name="AssistTab" Header="Shift assist">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <styles:SHSection x:Name="AssistSection" Title="THROTTLE CUT AND BLIP" ShowSeparator="True" Margin="0,4,0,0">
+                        <StackPanel>
+                            <TextBlock x:Name="AssistIntroText" Style="{StaticResource Hint}"
+                                       Text="Saved with the preset, so each car can have its own. For the paddles, map SimsonnPedalsPlugin.Upshift and SimsonnPedalsPlugin.Downshift to them in SimHub's Controls and events; the game still gets the paddles as before. Leave these off for cars that cut and blip by themselves." />
+                            <TextBlock x:Name="DirectAssistNote" Style="{StaticResource Hint}" Visibility="Collapsed"
+                                       Text="Direct mode: the pedals cut the throttle themselves when braking, from up to 50 % brake (a higher level is sent as 50 %). Shift cut and blip need vJoy mode." />
+                            <Grid x:Name="ShiftGrid" Margin="0,4,0,0" HorizontalAlignment="Left">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="230" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="56" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                    <RowDefinition />
+                                </Grid.RowDefinitions>
+                                <styles:SHToggleCheckbox IsChecked="{Binding UpshiftCut, Mode=TwoWay}" Margin="0,2"
+                                                         ToolTip="Holds the throttle at 0 for a moment after each upshift press, for flat shifts">Cut throttle on upshift</styles:SHToggleCheckbox>
+                                <TextBlock Grid.Column="1" Text="for (ms)" VerticalAlignment="Center" />
+                                <Slider Grid.Column="2" Minimum="10" Maximum="300" SmallChange="5" LargeChange="20" IsSnapToTickEnabled="True" TickFrequency="5"
+                                        Value="{Binding UpshiftCutMs, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <TextBox Grid.Column="3" Text="{Binding UpshiftCutMs, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
 
-                    <TextBlock Margin="0,14,0,0" FontWeight="SemiBold" Text="Direct mode tests (no vJoy, phase D1)" />
-                    <TextBlock Margin="0,2,0,0" Opacity="0.7" TextWrapping="Wrap"
-                               Text="Check whether the pedals take new settings live, without dropping off USB. Each test changes the pedals' settings for a few seconds and puts them back; follow the line below while it runs. Close Simsonn Manager first. Results go to the dump folder (Open folder)." />
-                    <WrapPanel Margin="0,6,0,0">
-                        <styles:SHButtonSecondary x:Name="LiveWriteTestButton" Click="OnLiveWriteTestClick"
-                                                  ToolTip="Hold the throttle halfway. Writes settings where the throttle reaches 100 % at half travel, then the original back. Shows whether the change applied live and whether the pedals stayed connected.">Live write test</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary x:Name="MaxForceTestButton" Click="OnMaxForceTestClick"
-                                                  ToolTip="Press the brake lightly and hold. Halves the brake's max force with the Manager's live command, then puts it back. Shows whether it applied live and was saved.">Live max force test</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary x:Name="BrakeCutTestButton" Click="OnBrakeCutTestClick"
-                                                  ToolTip="Switches the pedals' own throttle cut on for 10 s at this brake level (up to 50 %), then back as it was. Hold the throttle and press the brake past the level a few times.">Firmware brake cut test</styles:SHButtonSecondary>
-                        <TextBlock Text="at" VerticalAlignment="Center" Margin="4,0,4,0" />
-                        <TextBox x:Name="BrakeCutTestBox" Width="40" Text="20" VerticalContentAlignment="Center" />
-                        <TextBlock Text="% brake" VerticalAlignment="Center" Margin="4,0,0,0" />
-                        <styles:SHButtonSecondary x:Name="WritePauseTestButton" Click="OnWritePauseTestClick" Margin="8,0,0,0"
-                                                  ToolTip="Press the brake lightly and hold. Reads the pedals' settings and writes the same bytes back, timing how long the pedals' joystick reports stop during each. Changes nothing.">Write pause test</styles:SHButtonSecondary>
-                    </WrapPanel>
-                    <TextBlock x:Name="DirectTestStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
-                </StackPanel>
-            </styles:SHSection>
+                                <styles:SHToggleCheckbox Grid.Row="1" IsChecked="{Binding DownshiftBlip, Mode=TwoWay}" Margin="0,2"
+                                                         ToolTip="Opens the throttle briefly on each downshift press (rev match), even while braking">Blip throttle on downshift</styles:SHToggleCheckbox>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="to (% throttle)" VerticalAlignment="Center" />
+                                <Slider Grid.Row="1" Grid.Column="2" Minimum="1" Maximum="100" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1"
+                                        Value="{Binding BlipPercent, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding BlipPercent, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="for (ms)" VerticalAlignment="Center" />
+                                <Slider Grid.Row="2" Grid.Column="2" Minimum="10" Maximum="400" SmallChange="5" LargeChange="20" IsSnapToTickEnabled="True" TickFrequency="5"
+                                        Value="{Binding BlipMs, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding BlipMs, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
+                            </Grid>
+                            <Grid HorizontalAlignment="Left" Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="230" />
+                                    <ColumnDefinition Width="120" />
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="56" />
+                                </Grid.ColumnDefinitions>
+                                <styles:SHToggleCheckbox IsChecked="{Binding BrakeCut, Mode=TwoWay}" Margin="0,2"
+                                                         ToolTip="Throttle goes to 0 while the brake output is at or above this level (a downshift blip still gets through). In direct mode the pedals do it, up to 50 %.">Cut throttle when braking</styles:SHToggleCheckbox>
+                                <TextBlock Grid.Column="1" Text="from (% brake)" VerticalAlignment="Center" />
+                                <Slider Grid.Column="2" Minimum="1" Maximum="100" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1"
+                                        Value="{Binding BrakeCutPercent, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <TextBox Grid.Column="3" Text="{Binding BrakeCutPercent, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
+                            </Grid>
 
-            <styles:SHSection Title="PEDAL FIRMWARE" ShowSeparator="True">
-                <StackPanel>
-                    <TextBlock Opacity="0.7" TextWrapping="Wrap"
-                               Text="Updates the pedals' firmware with the files and key from your Simsonn Manager install, the same way the Manager does. Close Simsonn Manager and the game first, and don't unplug the pedals while it runs (about a minute)." />
-                    <WrapPanel Margin="0,8,0,0">
-                        <styles:SHButtonSecondary x:Name="CheckFirmwareButton" Click="OnCheckFirmwareClick"
-                                                  ToolTip="Reads the firmware version from the pedals and lists the firmware files Simsonn Manager has for them. Changes nothing.">Check firmware</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary x:Name="ChooseManagerButton" Click="OnChooseManagerClick"
-                                                  ToolTip="Point the plugin at SIMSONN Manager.exe if it wasn't found">Find Simsonn Manager…</styles:SHButtonSecondary>
-                    </WrapPanel>
-                    <WrapPanel Margin="0,8,0,0">
-                        <TextBlock Text="Firmware" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <ComboBox x:Name="FirmwareCombo" Width="340" Margin="0,0,8,0" />
-                        <styles:SHButtonPrimary x:Name="UpdateFirmwareButton" Click="OnUpdateFirmwareClick" IsEnabled="False">Update firmware</styles:SHButtonPrimary>
-                    </WrapPanel>
-                    <TextBlock x:Name="FirmwareStatus" Margin="0,6,0,0" TextWrapping="Wrap" />
-                </StackPanel>
-            </styles:SHSection>
+                            <StackPanel x:Name="ShiftTestPanel">
+                                <TextBlock Style="{StaticResource Heading}" Text="Try it" />
+                                <TextBlock x:Name="PaddleStatus" />
+                                <WrapPanel Style="{StaticResource Row}">
+                                    <styles:SHButtonSecondary Click="OnTestUpshiftClick" ToolTip="Same as pressing the upshift paddle">Test upshift</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary Click="OnTestDownshiftClick" ToolTip="Same as pressing the downshift paddle">Test downshift</styles:SHButtonSecondary>
+                                    <TextBlock x:Name="ThrottleSentText" VerticalAlignment="Center" Margin="8,0,0,0" FontFamily="Consolas" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </styles:SHSection>
+                </ScrollViewer>
+            </styles:SHTabItem>
 
-            <styles:SHSection Title="PLUGIN UPDATES" ShowSeparator="True">
-                <StackPanel>
-                    <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" />
-                    <WrapPanel Margin="0,8,0,0">
-                        <styles:SHButtonSecondary x:Name="CheckUpdatesButton" Click="OnCheckUpdatesClick">Check for updates</styles:SHButtonSecondary>
-                        <styles:SHButtonPrimary x:Name="InstallUpdateButton" Click="OnInstallUpdateClick" Visibility="Collapsed">Update</styles:SHButtonPrimary>
-                        <styles:SHButtonPrimary x:Name="RestartButton" Click="OnRestartClick" Visibility="Collapsed">Restart SimHub</styles:SHButtonPrimary>
-                        <styles:SHButtonSecondary x:Name="ReleaseNotesButton" Click="OnReleaseNotesClick">Release notes</styles:SHButtonSecondary>
-                    </WrapPanel>
-                </StackPanel>
-            </styles:SHSection>
+            <!-- ============ Presets: saving, per car / class / game, importing ============ -->
+            <styles:SHTabItem Header="Presets">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,4,0,0">
+                        <styles:SHSection Title="SAVE THE CURRENT VALUES" ShowSeparator="True">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Save writes into the active preset (top right). These make a new preset from the current values instead." />
+                                <WrapPanel>
+                                    <TextBlock Style="{StaticResource Label}" Text="New preset named" />
+                                    <TextBox x:Name="NewPresetName" Width="200" VerticalContentAlignment="Center" Margin="0,0,8,0" />
+                                    <styles:SHButtonSecondary Click="OnSaveAsClick">Save as</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <WrapPanel Style="{StaticResource Row}">
+                                    <styles:SHButtonSecondary x:Name="SaveForCarButton" Click="OnSaveForCarClick"
+                                                              ToolTip="Save the current values as a preset named after this car; it's picked whenever you drive this car">Save for this car</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary x:Name="SaveForClassButton" Click="OnSaveForClassClick"
+                                                              ToolTip="Save the current values as a preset for this car's class; it's picked for every car in the class without its own preset">Save for this class</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary x:Name="SaveForGameButton" Click="OnSaveForGameClick"
+                                                              ToolTip="Save the current values as this game's preset; it's picked for every car without a car or class preset">Save for current game</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <WrapPanel Style="{StaticResource Row}" Margin="0,10,0,0">
+                                    <styles:SHButtonSecondary x:Name="DeleteButton" Click="OnDeleteClick"
+                                                              ToolTip="Delete the active preset (Default can't be deleted)">Delete active preset</styles:SHButtonSecondary>
+                                </WrapPanel>
+                            </StackPanel>
+                        </styles:SHSection>
 
-            <styles:SHToggleCheckbox x:Name="ClutchToggle" Margin="4,4,0,0" Click="OnClutchToggleClick"
-                                     ToolTip="Shape the clutch here too and send it to its own vJoy axis (Z unless changed in its Axis mapping)">
-                Clutch pedal connected
-            </styles:SHToggleCheckbox>
-            <Grid Margin="0,4,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition x:Name="ClutchColumn" Width="0" />
-                    <ColumnDefinition />
-                    <ColumnDefinition />
-                </Grid.ColumnDefinitions>
-                <local:PedalPanel x:Name="ClutchPanel" Title="Clutch" Visibility="Collapsed" />
-                <local:PedalPanel x:Name="BrakePanel" Grid.Column="1" Title="Brake" ShowMaxForce="True" />
-                <local:PedalPanel x:Name="ThrottlePanel" Grid.Column="2" Title="Throttle" />
-            </Grid>
+                        <styles:SHSection Title="AUTOMATIC SWITCHING" ShowSeparator="True">
+                            <StackPanel>
+                                <styles:SHToggleCheckbox x:Name="AutoApplyToggle" Click="OnAutoApplyClick">
+                                    Switch preset automatically: this car's preset, else its class, else the game's, else Default
+                                </styles:SHToggleCheckbox>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                                           Text="The line under the active preset (top right) shows the car SimHub sees and which preset it gets." />
+                            </StackPanel>
+                        </styles:SHSection>
 
-            <styles:SHSection x:Name="AssistSection" Title="THROTTLE CUT AND BLIP" ShowSeparator="True">
-                <StackPanel>
-                    <TextBlock x:Name="AssistIntroText" Opacity="0.7" TextWrapping="Wrap"
-                               Text="Saved with the preset, so each car can have its own. For the paddles, map SimsonnPedalsPlugin.Upshift and SimsonnPedalsPlugin.Downshift to them in SimHub's Controls and events; the game still gets the paddles as before. Leave these off for cars that cut and blip by themselves." />
-                    <TextBlock x:Name="PaddleStatus" Margin="0,4,0,0" />
-                    <Grid x:Name="ShiftGrid" Margin="0,6,0,0" MaxWidth="700" HorizontalAlignment="Left">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="230" />
-                            <ColumnDefinition Width="130" />
-                            <ColumnDefinition Width="200" />
-                            <ColumnDefinition Width="50" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition />
-                            <RowDefinition />
-                            <RowDefinition />
-                        </Grid.RowDefinitions>
-                        <styles:SHToggleCheckbox IsChecked="{Binding UpshiftCut, Mode=TwoWay}" Margin="0,2"
-                                                 ToolTip="Holds the throttle at 0 for a moment after each upshift press, for flat shifts">Cut throttle on upshift</styles:SHToggleCheckbox>
-                        <TextBlock Grid.Column="1" Text="for (ms)" VerticalAlignment="Center" />
-                        <Slider Grid.Column="2" Minimum="10" Maximum="300" SmallChange="5" LargeChange="20" IsSnapToTickEnabled="True" TickFrequency="5"
-                                Value="{Binding UpshiftCutMs, Mode=TwoWay}" VerticalAlignment="Center" />
-                        <TextBox Grid.Column="3" Text="{Binding UpshiftCutMs, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
+                        <styles:SHSection Title="IMPORT FROM SIMSONN MANAGER" ShowSeparator="True">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Fills the active preset with the dead zones, curves and brake force of a Simsonn Manager preset, so the pedals respond as they did with it. Revert undoes it." />
+                                <WrapPanel>
+                                    <styles:SHButtonSecondary x:Name="ImportManagerFileButton" Click="OnImportManagerFileClick"
+                                                              ToolTip="Loads dead zones, curves and the brake's 100% force from a Simsonn Manager preset file (etc\device\&lt;name&gt;\pedal.cfg) into the active preset, so the pedals respond exactly as they did with it. Revert undoes it.">Import Manager preset…</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary x:Name="ImportPedalsButton" Click="OnImportPedalsClick"
+                                                              ToolTip="Same, from the settings stored in the pedals (useful before Set up pedals replaces them). The pedals stop responding for about 2 seconds.">Import from pedals</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <TextBlock x:Name="ImportStatus" Style="{StaticResource Status}" />
+                            </StackPanel>
+                        </styles:SHSection>
+                    </StackPanel>
+                </ScrollViewer>
+            </styles:SHTabItem>
 
-                        <styles:SHToggleCheckbox Grid.Row="1" IsChecked="{Binding DownshiftBlip, Mode=TwoWay}" Margin="0,2"
-                                                 ToolTip="Opens the throttle briefly on each downshift press (rev match), even while braking">Blip throttle on downshift</styles:SHToggleCheckbox>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="to (% throttle)" VerticalAlignment="Center" />
-                        <Slider Grid.Row="1" Grid.Column="2" Minimum="1" Maximum="100" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1"
-                                Value="{Binding BlipPercent, Mode=TwoWay}" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding BlipPercent, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="for (ms)" VerticalAlignment="Center" />
-                        <Slider Grid.Row="2" Grid.Column="2" Minimum="10" Maximum="400" SmallChange="5" LargeChange="20" IsSnapToTickEnabled="True" TickFrequency="5"
-                                Value="{Binding BlipMs, Mode=TwoWay}" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding BlipMs, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
-                    </Grid>
-                    <Grid MaxWidth="700" HorizontalAlignment="Left">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="230" />
-                            <ColumnDefinition Width="130" />
-                            <ColumnDefinition Width="200" />
-                            <ColumnDefinition Width="50" />
-                        </Grid.ColumnDefinitions>
-                        <styles:SHToggleCheckbox IsChecked="{Binding BrakeCut, Mode=TwoWay}" Margin="0,2"
-                                                 ToolTip="Throttle goes to 0 while the brake output is at or above this level (a downshift blip still gets through). In direct mode the pedals do it, up to 50 %.">Cut throttle when braking</styles:SHToggleCheckbox>
-                        <TextBlock Grid.Column="1" Text="from (% brake)" VerticalAlignment="Center" />
-                        <Slider Grid.Column="2" Minimum="1" Maximum="100" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1"
-                                Value="{Binding BrakeCutPercent, Mode=TwoWay}" VerticalAlignment="Center" />
-                        <TextBox Grid.Column="3" Text="{Binding BrakeCutPercent, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
-                    </Grid>
-                    <TextBlock x:Name="DirectAssistNote" Margin="0,4,0,0" Opacity="0.7" TextWrapping="Wrap" Visibility="Collapsed"
-                               Text="Direct mode: the pedals cut the throttle themselves when braking, from up to 50 % brake (a higher level is sent as 50 %). Shift cut and blip need vJoy mode." />
-                    <WrapPanel x:Name="ShiftTestPanel" Margin="0,6,0,0">
-                        <styles:SHButtonSecondary Click="OnTestUpshiftClick" ToolTip="Same as pressing the upshift paddle">Test upshift</styles:SHButtonSecondary>
-                        <styles:SHButtonSecondary Click="OnTestDownshiftClick" ToolTip="Same as pressing the downshift paddle">Test downshift</styles:SHButtonSecondary>
-                        <TextBlock x:Name="ThrottleSentText" VerticalAlignment="Center" Margin="8,0,0,0" FontFamily="Consolas" />
-                    </WrapPanel>
-                </StackPanel>
-            </styles:SHSection>
-        </StackPanel>
-    </ScrollViewer>
+            <!-- ============ How the game gets the pedals ============ -->
+            <styles:SHTabItem Header="Output and game">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,4,0,0">
+                        <styles:SHSection Title="OUTPUT MODE" ShowSeparator="True">
+                            <StackPanel>
+                                <WrapPanel>
+                                    <TextBlock Style="{StaticResource Label}" Text="The game gets the pedals" />
+                                    <ComboBox x:Name="OutputModeCombo" Width="360" SelectionChanged="OnOutputModeChanged" Margin="0,0,8,0">
+                                        <ComboBoxItem Content="through vJoy (shaped in the plugin)" />
+                                        <ComboBoxItem Content="directly (shaped inside the pedals, no vJoy)" />
+                                    </ComboBox>
+                                    <styles:SHButtonSecondary x:Name="WriteToPedalsButton" Click="OnWriteToPedalsClick"
+                                                              ToolTip="Reads the pedals' settings and writes the active preset as it is now (unsaved edits too) if they differ">Write to pedals</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <TextBlock x:Name="OutputNoteText" Style="{StaticResource Hint}" Margin="0,6,0,0" />
+                                <WrapPanel x:Name="VJoyDeviceRow" Style="{StaticResource Row}">
+                                    <TextBlock Style="{StaticResource Label}" Text="vJoy device" />
+                                    <ComboBox x:Name="VJoyDeviceCombo" Width="60" SelectionChanged="OnVJoyDeviceChanged" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </styles:SHSection>
+
+                        <styles:SHSection Title="GAME BINDING" ShowSeparator="True">
+                            <StackPanel>
+                                <TextBlock x:Name="HowToBindText" Style="{StaticResource Hint}" />
+                                <WrapPanel>
+                                    <styles:SHButtonSecondary Click="OnCheckBindingsClick"
+                                                              ToolTip="Reads iRacing's saved controls and checks that throttle, brake (and clutch) are bound to the plugin's vJoy axes (in direct mode: to the pedals' own axes). Rechecked automatically whenever iRacing saves its controls.">Check iRacing bindings</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                                           Text="The result shows at the top of the page. In vJoy mode, each pedal's Move vJoy axis (Pedals tab, under Calibration and binding) helps the game's binding screen pick the right axis." />
+                            </StackPanel>
+                        </styles:SHSection>
+
+                        <styles:SHSection Title="CONNECTION" ShowSeparator="True">
+                            <StackPanel>
+                                <WrapPanel>
+                                    <styles:SHButtonSecondary Click="OnReconnectClick"
+                                                              ToolTip="Close and reopen the pedals, as if the USB cable had been replugged">Reconnect pedals</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <TextBlock x:Name="RawAxesText" Margin="0,6,0,0" Opacity="0.6" FontFamily="Consolas" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </styles:SHSection>
+                    </StackPanel>
+                </ScrollViewer>
+            </styles:SHTabItem>
+
+            <!-- ============ The pedals' own settings and firmware ============ -->
+            <styles:SHTabItem Header="Pedal setup">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,4,0,0">
+                        <styles:SHSection Title="SETTINGS STORED IN THE PEDALS" ShowSeparator="True">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Close Simsonn Manager and the game first. Each of these pauses the pedals for about 2 seconds; the current settings are saved to the dump folder first." />
+
+                                <TextBlock Style="{StaticResource Heading}" Margin="0,4,0,4" Text="Calibrate and set up" />
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Calibrate pedals teaches the pedals their rest and full-press points. Set up pedals makes them linear with no dead zone, so the shaping happens in this plugin (vJoy mode). Both keep this brake max force." />
+                                <WrapPanel>
+                                    <TextBlock Style="{StaticResource Label}" Text="Brake max force in the pedals (kg)" />
+                                    <TextBox x:Name="SetupMaxForceBox" Width="60" VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                             ToolTip="Force at which the pedals report 100% brake. Set it above your hardest press; choose your real 100% with the brake panel's '100% at'." />
+                                </WrapPanel>
+                                <WrapPanel Style="{StaticResource Row}">
+                                    <styles:SHButtonPrimary x:Name="CalibratePedalsButton" Click="OnCalibratePedalsClick"
+                                                            ToolTip="Calibrates the pedals themselves (rest and full press), like Simsonn Manager's Calibrate, then sets them up like Set up pedals">Calibrate pedals</styles:SHButtonPrimary>
+                                    <styles:SHButtonPrimary x:Name="CalibrationStartButton" Click="OnCalibrationStartClick" Visibility="Collapsed">Start</styles:SHButtonPrimary>
+                                    <styles:SHButtonPrimary x:Name="CalibrationFinishButton" Click="OnCalibrationFinishClick" Visibility="Collapsed">Finish</styles:SHButtonPrimary>
+                                    <styles:SHButtonSecondary x:Name="CalibrationCancelButton" Click="OnCalibrationCancelClick" Visibility="Collapsed">Cancel</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary x:Name="SetupPedalsButton" Click="OnSetupPedalsClick"
+                                                              ToolTip="Writes linear curves, no dead zone, filter off and this max force to the pedals, so all shaping happens here">Set up pedals</styles:SHButtonSecondary>
+                                    <TextBlock x:Name="CalibrationLive" VerticalAlignment="Center" Margin="8,0,0,0" FontFamily="Consolas" />
+                                </WrapPanel>
+
+                                <TextBlock Style="{StaticResource Heading}" Text="Read" />
+                                <WrapPanel>
+                                    <TextBlock Style="{StaticResource Label}" Text="Label (optional)" />
+                                    <TextBox x:Name="DumpLabel" Width="220" VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                             ToolTip="Describe the one change you made, e.g. brake deadzone start 10" />
+                                    <styles:SHButtonSecondary x:Name="ReadPedalSettingsButton" Click="OnReadPedalSettingsClick"
+                                                              ToolTip="Downloads the settings stored in the pedals to a file and shows them here, without changing anything">Read pedal settings</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary Click="OnOpenDumpFolderClick"
+                                                              ToolTip="The folder with the settings files and test reports">Open folder</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <TextBlock x:Name="PedalSettingsStatus" Style="{StaticResource Status}" Margin="0,10,0,0" />
+                            </StackPanel>
+                        </styles:SHSection>
+
+                        <styles:SHSection Title="FIRMWARE" ShowSeparator="True">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Updates the pedals' firmware with the files and key from your Simsonn Manager install, the same way the Manager does. Close Simsonn Manager and the game first, and don't unplug the pedals while it runs (about a minute)." />
+                                <WrapPanel>
+                                    <styles:SHButtonSecondary x:Name="CheckFirmwareButton" Click="OnCheckFirmwareClick"
+                                                              ToolTip="Reads the firmware version from the pedals and lists the firmware files Simsonn Manager has for them. Changes nothing.">Check firmware</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary x:Name="ChooseManagerButton" Click="OnChooseManagerClick"
+                                                              ToolTip="Point the plugin at SIMSONN Manager.exe if it wasn't found">Find Simsonn Manager…</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <WrapPanel Style="{StaticResource Row}">
+                                    <TextBlock Style="{StaticResource Label}" Text="Firmware" />
+                                    <ComboBox x:Name="FirmwareCombo" Width="340" Margin="0,0,8,0" />
+                                    <styles:SHButtonPrimary x:Name="UpdateFirmwareButton" Click="OnUpdateFirmwareClick" IsEnabled="False">Update firmware</styles:SHButtonPrimary>
+                                </WrapPanel>
+                                <TextBlock x:Name="FirmwareStatus" Style="{StaticResource Status}" />
+                            </StackPanel>
+                        </styles:SHSection>
+
+                        <styles:SHSection Title="TESTS" ShowSeparator="True" Expandable="True" IsExpanded="False">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="For checking how the pedals behave; not needed for normal use. Each test changes the pedals' settings for a few seconds and puts them back; follow the line below while it runs. Close Simsonn Manager first. Reports go to the dump folder (Open folder above)." />
+                                <WrapPanel>
+                                    <styles:SHButtonSecondary x:Name="RewriteTestButton" Click="OnRewriteTestClick"
+                                                              ToolTip="Reads the settings, writes the same bytes back to the pedals and checks them. Changes nothing.">Rewrite test</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary x:Name="WritePauseTestButton" Click="OnWritePauseTestClick"
+                                                              ToolTip="Press the brake lightly and hold. Reads the pedals' settings and writes the same bytes back, timing how long the pedals' joystick reports stop during each. Changes nothing.">Write pause test</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary x:Name="LiveWriteTestButton" Click="OnLiveWriteTestClick"
+                                                              ToolTip="Hold the throttle halfway. Writes settings where the throttle reaches 100 % at half travel, then the original back. Shows whether the change applied live and whether the pedals stayed connected.">Live write test</styles:SHButtonSecondary>
+                                    <styles:SHButtonSecondary x:Name="MaxForceTestButton" Click="OnMaxForceTestClick"
+                                                              ToolTip="Press the brake lightly and hold. Halves the brake's max force with the Manager's live command, then puts it back. Shows whether it applied live and was saved.">Live max force test</styles:SHButtonSecondary>
+                                </WrapPanel>
+                                <WrapPanel Style="{StaticResource Row}">
+                                    <styles:SHButtonSecondary x:Name="BrakeCutTestButton" Click="OnBrakeCutTestClick"
+                                                              ToolTip="Switches the pedals' own throttle cut on for 10 s at this brake level (up to 50 %), then back as it was. Hold the throttle and press the brake past the level a few times.">Firmware brake cut test</styles:SHButtonSecondary>
+                                    <TextBlock Text="at" VerticalAlignment="Center" Margin="4,0,4,0" />
+                                    <TextBox x:Name="BrakeCutTestBox" Width="40" Text="20" VerticalContentAlignment="Center" />
+                                    <TextBlock Text="% brake" VerticalAlignment="Center" Margin="4,0,0,0" />
+                                </WrapPanel>
+                                <TextBlock x:Name="DirectTestStatus" Style="{StaticResource Status}" />
+                            </StackPanel>
+                        </styles:SHSection>
+                    </StackPanel>
+                </ScrollViewer>
+            </styles:SHTabItem>
+
+            <!-- ============ Plugin updates ============ -->
+            <styles:SHTabItem x:Name="UpdatesTab" Header="Updates">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <styles:SHSection Title="PLUGIN UPDATES" ShowSeparator="True" Margin="0,4,0,0">
+                        <StackPanel>
+                            <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" />
+                            <WrapPanel Margin="0,8,0,0">
+                                <styles:SHButtonSecondary x:Name="CheckUpdatesButton" Click="OnCheckUpdatesClick">Check for updates</styles:SHButtonSecondary>
+                                <styles:SHButtonPrimary x:Name="InstallUpdateButton" Click="OnInstallUpdateClick" Visibility="Collapsed">Update</styles:SHButtonPrimary>
+                                <styles:SHButtonPrimary x:Name="RestartButton" Click="OnRestartClick" Visibility="Collapsed">Restart SimHub</styles:SHButtonPrimary>
+                                <styles:SHButtonSecondary x:Name="ReleaseNotesButton" Click="OnReleaseNotesClick">Release notes</styles:SHButtonSecondary>
+                            </WrapPanel>
+                        </StackPanel>
+                    </styles:SHSection>
+                </ScrollViewer>
+            </styles:SHTabItem>
+        </styles:SHTabControl>
+    </Grid>
 </UserControl>

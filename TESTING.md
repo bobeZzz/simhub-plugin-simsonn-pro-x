@@ -8,8 +8,8 @@ Every new release adds its checks here.
 
 ### 1.0.15 – Clutch panel
 - [ ] Tick **Clutch pedal connected** (above the pedal panels). A Clutch panel appears on the left.
-- [ ] Press the clutch: its Position bar moves. If not, find the moving axis on the **Raw axes** line at the top and
-      pick it under the panel's **Axis mapping** (expected Rz on firmware 2.1.1).
+- [ ] Press the clutch: its Pedal bar moves. If not, find the moving axis on the **Raw axes** line (Output and game
+      tab) and pick it under the panel's **Calibration and binding → Pedal axis** (expected Rz on firmware 2.1.1).
 - [ ] **Calibrate** the clutch (press fully a few times, Finish); Position goes 0 → 100 %.
 - [ ] Bind it in iRacing with **Move vJoy axis**. If the vJoy status says there's no Z axis, enable Z in Configure vJoy.
 - [ ] Ends feel right. If the start or end seems cut, report it: the pedals still hold their own 5–95 % clutch dead
@@ -26,7 +26,7 @@ Every new release adds its checks here.
 - [ ] Start SimHub again right away: the pedals work normally (the guard doesn't hold on to vJoy).
 
 ### 1.0.17 – iRacing binding check
-- [ ] With everything bound to vJoy, the line under the vJoy status says throttle, brake (and clutch) are bound to vJoy.
+- [ ] With everything bound to vJoy, the iRacing line at the top of the page says throttle, brake (and clutch) are bound to vJoy.
 - [ ] Rebind the brake in iRacing to another vJoy axis (or to the pedals directly), save: the line turns amber and
       names the problem within a second or two. Put it back.
 - [ ] If it warns about something that is actually fine, send the text and `Documents\iRacing\joyCalib.yaml` (vJoy
@@ -42,7 +42,7 @@ Every new release adds its checks here.
 
 ### 1.0.19 – Throttle cut and blip
 - [ ] In SimHub **Controls and events**, map `SimsonnPedalsPlugin.Upshift` and `SimsonnPedalsPlugin.Downshift` to the
-      paddles. On the plugin page, "Paddle presses seen" counts up with each paddle.
+      paddles. On the plugin's Shift assist tab, "Paddle presses seen" counts up with each paddle.
 - [ ] Tick **Cut throttle on upshift** (60 ms). Flat-shift up in a car without its own cut: the shift goes through
       clean with the throttle held. Try 40–120 ms to find what the car needs.
 - [ ] Tick **Blip throttle on downshift** (35 %, 120 ms). Downshift while braking: revs rise briefly, no lockup or
@@ -54,7 +54,7 @@ Every new release adds its checks here.
 - [ ] Old presets load with all three off and aren't marked unsaved.
 
 ### 1.0.23 – Direct mode: safe writes, live brake, brake cut, page (D4–D6)
-In direct mode (Output → "directly"), iRacing bound to the SIMSONN pedals.
+In direct mode (Output and game tab → "directly"), iRacing bound to the SIMSONN pedals.
 - [ ] **Waits while driving**: on track, switch preset on the page (or Save a change). The status turns amber:
       "Waiting to send … the car is moving". Nothing freezes. Stop in the pits and release both pedals: it writes
       (a 2 s freeze you shouldn't notice while stopped), status "The pedals hold … (written …)".
@@ -72,6 +72,23 @@ In direct mode (Output → "directly"), iRacing bound to the SIMSONN pedals.
       still on vJoy, or brake on the throttle's axis).
 - [ ] Back to vJoy: the firmware brake cut is switched off too (Read pedal settings shows "Firmware throttle cut: off"),
       and the vJoy-only parts come back.
+
+### 1.0.24 – New page layout
+- [ ] The top of the page always shows the pedals / vJoy / iRacing binding lines and the **Active preset** box (preset
+      list, Save, Revert, the amber "Unsaved changes" line and the automatic-choice line), whatever tab is open.
+- [ ] Tabs: **Pedals**, **Shift assist**, **Presets**, **Output and game**, **Pedal setup**, **Updates**. Each one
+      scrolls on its own if it doesn't fit.
+- [ ] **Pedals** tab: each panel reads top to bottom: Pedal / To game bars, Force (brake), Dead zone, Curve. The
+      panels' Calibrate, Move vJoy axis and Axes are under **Calibration and binding** (click to open). The clutch toggle
+      is at the top right of the tab.
+- [ ] **Presets** tab: Save as, Save for car / class / game, Delete active preset, automatic switching, Manager import.
+- [ ] **Output and game** tab: output mode, vJoy device, Check iRacing bindings, Reconnect pedals and the raw axes line.
+- [ ] **Pedal setup** tab: Calibrate pedals / Set up pedals / Read pedal settings, Firmware, and **Tests** folded away
+      (click the title to open).
+- [ ] In direct mode the Shift assist tab is called **Brake cut**, the vJoy device row and the panels' vJoy axis row are
+      gone, and the direct-mode status line shows under the pedals line at the top.
+- [ ] When an update is out, the last tab reads **Update available**.
+- [ ] Anything that looks wrong, cramped or hard to find: send a screenshot.
 
 ### 1.0.21 – Direct mode (D3, no vJoy)
 - [ ] Restart SimHub in direct mode: it reads the pedals once (about 2 s pause) and says the pedals hold the preset.
