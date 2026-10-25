@@ -125,11 +125,12 @@ namespace SimsonnPedals.UI
             if (plugin.Settings.OutputMode != OutputMode.Direct) return;
             var direct = plugin.Direct;
             bool? holds = direct.Holds(plugin.ActivePreset, plugin.Settings.ClutchEnabled);
-            bool pendingEdits = holds == false && !direct.Busy;
-            string text = direct.Status + (pendingEdits ? " Edits not in the pedals yet: Save or Write to pedals." : "") +
+            bool waiting = direct.Waiting;
+            bool pendingEdits = holds == false && !direct.Busy && !waiting;
+            string text = direct.Status + (pendingEdits ? " Edits not in the pedals yet: Save or Write to pedals (the brake's 100% and brake cut go live)." : "") +
                           $" ({plugin.Settings.DirectWriteCount} settings writes so far.)";
             if (DirectStatusText.Text != text) DirectStatusText.Text = text;
-            DirectStatusText.Foreground = pendingEdits ? ModifiedText.Foreground : VJoyStatusText.Foreground;
+            DirectStatusText.Foreground = pendingEdits || waiting ? ModifiedText.Foreground : VJoyStatusText.Foreground;
         }
 
         private async void OnOutputModeChanged(object sender, SelectionChangedEventArgs e)
@@ -204,8 +205,14 @@ namespace SimsonnPedals.UI
             OutputNoteText.Text = direct
                 ? "Direct mode: the pedals do the shaping and the game is bound to them. The bars show what the pedals send. Calibrate with Calibrate pedals (below), not the panels' Calibrate."
                 : "vJoy mode: the plugin shapes the pedals and feeds vJoy; bind the game to vJoy.";
-            AssistSection.IsEnabled = !direct;
-            AssistSection.Opacity = direct ? 0.5 : 1;
+            // Direct mode: vJoy-only parts go; the brake cut stays, done by the pedals.
+            var vjoyOnly = direct ? Visibility.Collapsed : Visibility.Visible;
+            VJoyStatusText.Visibility = PaddleStatus.Visibility = ShiftGrid.Visibility = ShiftTestPanel.Visibility = AssistIntroText.Visibility = vjoyOnly;
+            DirectAssistNote.Visibility = direct ? Visibility.Visible : Visibility.Collapsed;
+            AssistSection.Title = direct ? "THROTTLE CUT WHEN BRAKING" : "THROTTLE CUT AND BLIP";
+            HowToBindText.Text = direct
+                ? "Direct mode: bind throttle and brake (and clutch) to the SIMSONN pedals themselves in iRacing. The pedals hold the active preset, also with SimHub closed."
+                : "Bind throttle and brake to the vJoy device in iRacing. Set the pedals to a linear curve, 0 dead zone and no filter in Simsonn Manager so the shaping isn't applied twice.";
             foreach (var panel in new[] { BrakePanel, ThrottlePanel, ClutchPanel }) panel.DirectMode = direct;
             checkedBindingsFor = null;
         }
@@ -314,17 +321,12 @@ namespace SimsonnPedals.UI
         {
             if (bindingCheckRunning || (!force && DateTime.UtcNow < nextBindingCheck)) return;
             nextBindingCheck = DateTime.UtcNow.AddSeconds(1);
-            if (plugin.Settings.OutputMode == OutputMode.Direct)
-            {
-                const string directText = "iRacing: in direct mode, bind throttle and brake (and clutch) to the SIMSONN pedals. The binding check doesn't cover direct mode yet.";
-                if (IRacingBindingText.Text != directText) IRacingBindingText.Text = directText;
-                IRacingBindingText.Foreground = VJoyStatusText.Foreground;
-                return;
-            }
             var preset = plugin.ActivePreset;
             bool clutch = plugin.Settings.ClutchEnabled;
-            string key = $"{File.GetLastWriteTimeUtc(IRacingBindings.ControlsPath).Ticks}|{File.GetLastWriteTimeUtc(IRacingBindings.CalibrationPath).Ticks}|" +
-                         $"{preset.Throttle.OutputAxis}|{preset.Brake.OutputAxis}|{(clutch ? preset.Clutch.OutputAxis.ToString() : "-")}";
+            bool direct = plugin.Settings.OutputMode == OutputMode.Direct;
+            string key = $"{File.GetLastWriteTimeUtc(IRacingBindings.ControlsPath).Ticks}|{File.GetLastWriteTimeUtc(IRacingBindings.CalibrationPath).Ticks}|{direct}|" +
+                         $"{preset.Throttle.OutputAxis}|{preset.Brake.OutputAxis}|{(clutch ? preset.Clutch.OutputAxis.ToString() : "-")}|" +
+                         $"{preset.Throttle.SourceAxis}|{preset.Brake.SourceAxis}|{preset.Clutch.SourceAxis}";
             if (!force && key == checkedBindingsFor) return;
             checkedBindingsFor = key;
 
@@ -332,7 +334,7 @@ namespace SimsonnPedals.UI
             try
             {
                 int vendor = plugin.Settings.VendorId;
-                var result = await Task.Run(() => IRacingBindings.Check(preset, clutch, vendor));
+                var result = await Task.Run(() => IRacingBindings.Check(preset, clutch, vendor, direct));
                 IRacingBindingText.Text = result.Text;
                 // Same amber as the unsaved-preset warning.
                 IRacingBindingText.Foreground = result.Ok ? VJoyStatusText.Foreground : ModifiedText.Foreground;

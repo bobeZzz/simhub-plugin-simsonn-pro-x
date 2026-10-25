@@ -1,14 +1,13 @@
 # SIMSONN Pedals: plan and status
 
 Living plan for the SimHub plugin that replaces Simsonn Manager for the SIMSONN Pro X Ultra throttle and brake.
-Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.0.22).
+Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.0.23).
 
 ## Where we stopped (2026-10-25)
-- **Direct mode (no vJoy) works on the rig**: D1–D3 done and checked (1.0.20–1.0.22). Firmware 2.1.1 on the rig.
-- **Next: D4** — hold direct-mode writes while a game runs until the car is stopped and both pedals are released,
-  because every settings read or write freezes the pedals' input for 2 s (firmware timer).
-- Then D5 (live brake changes over the 0.2 s commands), D6 (page and binding check for direct mode).
-- Still waiting for rig checks from the vJoy phases: see [TESTING.md](TESTING.md) (1.0.15–1.0.19 and older).
+- **Direct mode (no vJoy) is complete**: D1–D3 checked on the rig (1.0.20–1.0.22); D4–D6 built in 1.0.23, rig
+  check pending. Firmware 2.1.1 on the rig.
+- **Next: rig checks** in [TESTING.md](TESTING.md): 1.0.23 (direct mode D4–D6) first, then the vJoy phases
+  (1.0.15–1.0.19 and older). Fixes from those come next; nothing else is planned.
 
 ## Where things are
 - Repo: https://github.com/bobeZzz/simhub-plugin-simsonn-pro-x (public, `main`; git user bobeZzz)
@@ -77,24 +76,14 @@ Update it when a phase starts, finishes or changes. Last updated 2026-10-25 (v1.
 | D1 | **Direct mode, risky parts.** Firmware (2.0.8, 2.1.1): block writes save to flash and reload live, no reset; `damping_max` changes the brake's raw max / high end live and saves; `brakeCutoff` live, capped at 50 %. Rig tests (Live write, Live max force, Firmware brake cut): all live, pedals stay connected, settings put back exactly | 1.0.20 |
 | D2 | **Preset → settings block** (`PedalExport`): calibration, invert, brake force and dead zone folded into the output ends; curve as whole-number points; invert = mirrored curve + firmware invert bit; only shaping bytes change. Offline on 2.1.1 and 2.0.8 dumps: within 0.09 % of vJoy mode, no stacking, default preset needs no write | – |
 | D3 | **Output mode and writing**: Output vJoy / directly; direct mode releases vJoy, bars show the pedals' output, panels' Calibrate off, shift cut / blip off. `DirectWriter` reads once, then writes from that block (`WriteKnown`) on mode on, preset switch, Save, Write to pedals (reads first); "Edits not in the pedals yet" marker; holds during other pedal operations; re-reads after replug; retries; back to vJoy writes neutral; write counter. Rig: works end to end, same feel as vJoy mode. **Write pause test**: a read freezes joystick reports 2074 ms, a write 2050 ms (firmware timer, see Known facts) | 1.0.21–1.0.22 |
+| D4 | **Safe writes**: while a game runs, reads and writes wait until the car is stopped (< 1 km/h) and throttle and brake are released; amber "Waiting to send … (the car is moving / release throttle and brake)"; sent from SimHub's data loop once safe. Rig check pending | 1.0.23 |
+| D5 | **Live brake and brake cut**: brake "100% at" edits go out half a second after the last change with `damping_max` (0.2 s pause) when only the brake's high end changes; the preset's "Cut throttle when braking" is the firmware's `brakeCutoff` in direct mode (capped at 50 %), sent with each pass; leaving direct mode switches it off. Offline: only the brake's centre/high end bytes change; display bytes (+34/+35) ignored when comparing. Rig check pending | 1.0.23 |
+| D6 | **Page and binding check**: direct mode hides the vJoy status, the panels' "Bind in game" row and the shift cut / blip rows (brake cut row stays, with a note); the binding check expects each pedal on the SIMSONN pedals' own axis (Rx/Ry/Rz on 2.1.x) and names vJoy or wrong-axis bindings. Offline on synthetic controls.cfg. Rig check pending | 1.0.23 |
 
 ## Next, in order
-### Direct mode, remaining
-1. **D4 – Write only when it's safe.** While a game runs (`IsGameRunning`), a pending direct-mode write waits until
-   the car is stopped (speed ≈ 0; pits, garage, or not on track) and both pedals are released (output below ~2 %),
-   then goes out. The status says it's waiting and why ("waiting for the car to stop"). Outside a game, write at once.
-   Write to pedals asks before writing while a game runs and the car isn't stopped. Rig check: switch preset while
-   driving (nothing happens), stop in the pits (it writes), car change in the garage.
-2. **D5 – Live brake changes and the firmware brake cut.** Report 6 commands freeze input only 200 ms:
-   - Brake "100% at" edits in direct mode go out live with `damping_max` (raw max + high end), debounced (~0.5 s
-     after the slider stops); everything else still waits for Save.
-   - The preset's "Cut throttle when braking" maps to the firmware's `brakeCutoff` (level capped at 50 %, the page
-     says so), sent when the preset is written and when the setting changes. Back to vJoy switches it off again.
-   - Check whether `damping_max` with a start dead zone needs the low end too (it only sets +4/+8 and the centre).
-3. **D6 – Page and binding check for direct mode.** Hide vJoy-only parts in direct mode (vJoy status, Move vJoy axis,
-   shift cut and blip) instead of greying them; the iRacing binding check expects the SIMSONN pedals' axes
-   (Rx/Ry/Rz on 2.1.x) instead of vJoy; the panels' live bars could show pedal travel too from the params report
-   (raw sensors) if wanted. TESTING.md section for all of direct mode.
+1. **Rig check 1.0.23** (direct mode D4–D6), see TESTING.md.
+2. **Rig checks still open from the vJoy phases**, below.
+3. Fixes from both. Nothing else planned; ideas under Maybe / parked.
 
 ### Rig checks still open (vJoy phases)
 Listed in [TESTING.md](TESTING.md): clutch panel (1.0.15), exit guard (1.0.16), binding check (1.0.17), Manager import
@@ -104,6 +93,10 @@ Flash wear: the STM32 page is good for about 10 000 erases; writes are skipped w
 settings (`DirectWriteCount`, shown on the page).
 
 ## Maybe / parked
+- Direct mode: the panels' bars show the pedals' output only; pedal travel could come from the params report (raw
+  sensors, no freeze) if wanted.
+- Direct mode: brake "100% at" goes live only with no brake start dead zone (`damping_max` sets the high end, not the
+  low end); with one it waits for Save. Could send the low end too through a full write when stopped.
 - Cache the pedals' block on disk so direct mode needn't read (2 s freeze) at every SimHub start; re-read only if
   the cached one doesn't match the firmware version or after a replug.
 - Avoid the re-read after the direct-mode tests that put everything back themselves.

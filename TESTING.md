@@ -53,6 +53,26 @@ Every new release adds its checks here.
 - [ ] Paddle-to-cut delay feels fine (SimHub reads the paddles, then the plugin). If the cut lands late, say so.
 - [ ] Old presets load with all three off and aren't marked unsaved.
 
+### 1.0.23 – Direct mode: safe writes, live brake, brake cut, page (D4–D6)
+In direct mode (Output → "directly"), iRacing bound to the SIMSONN pedals.
+- [ ] **Waits while driving**: on track, switch preset on the page (or Save a change). The status turns amber:
+      "Waiting to send … the car is moving". Nothing freezes. Stop in the pits and release both pedals: it writes
+      (a 2 s freeze you shouldn't notice while stopped), status "The pedals hold … (written …)".
+- [ ] Stopped but holding the brake: it waits with "release throttle and brake"; let go and it writes.
+- [ ] Car change: get into a car with its own preset in the garage; it's written while you're still stopped.
+- [ ] With no game running, Save writes at once.
+- [ ] **Live brake 100%**: move the brake's "100% at" slider (brake start dead zone 0). Half a second after you stop,
+      the status says "brake 100% sent live" with no Save, and the brake feels it (the pedals pause only 0.2 s). With a
+      brake start dead zone above 0 it waits for Save instead ("Edits not in the pedals yet").
+- [ ] **Brake cut**: tick "Cut throttle when braking" at 30 %. The status adds "brake cut at 30 %"; throttle held +
+      brake past 30 % gives 0 throttle in the game. At 70 % it's sent as 50 % (the pedals' limit). Untick: "brake cut
+      off".
+- [ ] **Page in direct mode**: no vJoy status line, no "Bind in game" row in the panels, no shift cut / blip rows (only
+      the brake cut row and a note); the binding line says "bound to the SIMSONN pedals" or names what's wrong (e.g.
+      still on vJoy, or brake on the throttle's axis).
+- [ ] Back to vJoy: the firmware brake cut is switched off too (Read pedal settings shows "Firmware throttle cut: off"),
+      and the vJoy-only parts come back.
+
 ### 1.0.21 – Direct mode (D3, no vJoy)
 - [ ] Restart SimHub in direct mode: it reads the pedals once (about 2 s pause) and says the pedals hold the preset.
 

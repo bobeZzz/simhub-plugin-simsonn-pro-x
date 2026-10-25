@@ -93,6 +93,9 @@ namespace SimsonnPedals.UI
                             : "Start the game's pedal calibration, click here, switch back and don't touch the pedals.";
             }
 
+            // The binding sweep moves a vJoy axis; in direct mode the game binds to the pedals themselves.
+            var bindVisibility = DirectMode ? Visibility.Collapsed : Visibility.Visible;
+            if (BindRow.Visibility != bindVisibility) BindCaption.Visibility = BindRow.Visibility = bindVisibility;
             CalibrateButton.IsEnabled = !DirectMode || Processor.IsCalibrating;
             if (DirectMode && !Processor.IsCalibrating)
             {

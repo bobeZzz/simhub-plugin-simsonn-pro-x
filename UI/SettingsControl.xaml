@@ -20,10 +20,9 @@
                             <styles:SHButtonSecondary Click="OnReconnectClick"
                                                       ToolTip="Close and reopen the pedals, as if the USB cable had been replugged">Reconnect pedals</styles:SHButtonSecondary>
                             <styles:SHButtonSecondary Click="OnCheckBindingsClick"
-                                                      ToolTip="Reads iRacing's saved controls and checks that throttle, brake (and clutch) are bound to the plugin's vJoy axes. Rechecked automatically whenever iRacing saves its controls.">Check iRacing bindings</styles:SHButtonSecondary>
+                                                      ToolTip="Reads iRacing's saved controls and checks that throttle, brake (and clutch) are bound to the plugin's vJoy axes (in direct mode: to the pedals' own axes). Rechecked automatically whenever iRacing saves its controls.">Check iRacing bindings</styles:SHButtonSecondary>
                         </WrapPanel>
-                        <TextBlock Margin="0,6,0,0" Opacity="0.7" TextWrapping="Wrap"
-                                   Text="Bind throttle and brake to the vJoy device in iRacing. Set the pedals to a linear curve, 0 dead zone and no filter in Simsonn Manager so the shaping isn't applied twice." />
+                        <TextBlock x:Name="HowToBindText" Margin="0,6,0,0" Opacity="0.7" TextWrapping="Wrap" />
                     </StackPanel>
                 </styles:SHSection>
                 <local:GifImage Grid.Column="1" ResourceName="SimsonnPedals.header.gif" Width="112" Height="112"
@@ -189,10 +188,10 @@
 
             <styles:SHSection x:Name="AssistSection" Title="THROTTLE CUT AND BLIP" ShowSeparator="True">
                 <StackPanel>
-                    <TextBlock Opacity="0.7" TextWrapping="Wrap"
+                    <TextBlock x:Name="AssistIntroText" Opacity="0.7" TextWrapping="Wrap"
                                Text="Saved with the preset, so each car can have its own. For the paddles, map SimsonnPedalsPlugin.Upshift and SimsonnPedalsPlugin.Downshift to them in SimHub's Controls and events; the game still gets the paddles as before. Leave these off for cars that cut and blip by themselves." />
                     <TextBlock x:Name="PaddleStatus" Margin="0,4,0,0" />
-                    <Grid Margin="0,6,0,0" MaxWidth="700" HorizontalAlignment="Left">
+                    <Grid x:Name="ShiftGrid" Margin="0,6,0,0" MaxWidth="700" HorizontalAlignment="Left">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="230" />
                             <ColumnDefinition Width="130" />
@@ -200,7 +199,6 @@
                             <ColumnDefinition Width="50" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition />
                             <RowDefinition />
                             <RowDefinition />
                             <RowDefinition />
@@ -222,15 +220,24 @@
                         <Slider Grid.Row="2" Grid.Column="2" Minimum="10" Maximum="400" SmallChange="5" LargeChange="20" IsSnapToTickEnabled="True" TickFrequency="5"
                                 Value="{Binding BlipMs, Mode=TwoWay}" VerticalAlignment="Center" />
                         <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding BlipMs, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
-
-                        <styles:SHToggleCheckbox Grid.Row="3" IsChecked="{Binding BrakeCut, Mode=TwoWay}" Margin="0,2"
-                                                 ToolTip="Throttle goes to 0 while the brake output is at or above this level (a downshift blip still gets through)">Cut throttle when braking</styles:SHToggleCheckbox>
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="from (% brake)" VerticalAlignment="Center" />
-                        <Slider Grid.Row="3" Grid.Column="2" Minimum="1" Maximum="100" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1"
-                                Value="{Binding BrakeCutPercent, Mode=TwoWay}" VerticalAlignment="Center" />
-                        <TextBox Grid.Row="3" Grid.Column="3" Text="{Binding BrakeCutPercent, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
                     </Grid>
-                    <WrapPanel Margin="0,6,0,0">
+                    <Grid MaxWidth="700" HorizontalAlignment="Left">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="230" />
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="50" />
+                        </Grid.ColumnDefinitions>
+                        <styles:SHToggleCheckbox IsChecked="{Binding BrakeCut, Mode=TwoWay}" Margin="0,2"
+                                                 ToolTip="Throttle goes to 0 while the brake output is at or above this level (a downshift blip still gets through). In direct mode the pedals do it, up to 50 %.">Cut throttle when braking</styles:SHToggleCheckbox>
+                        <TextBlock Grid.Column="1" Text="from (% brake)" VerticalAlignment="Center" />
+                        <Slider Grid.Column="2" Minimum="1" Maximum="100" SmallChange="1" LargeChange="5" IsSnapToTickEnabled="True" TickFrequency="1"
+                                Value="{Binding BrakeCutPercent, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="3" Text="{Binding BrakeCutPercent, StringFormat={}{0:0}}" TextAlignment="Right" Margin="6,2,0,2" />
+                    </Grid>
+                    <TextBlock x:Name="DirectAssistNote" Margin="0,4,0,0" Opacity="0.7" TextWrapping="Wrap" Visibility="Collapsed"
+                               Text="Direct mode: the pedals cut the throttle themselves when braking, from up to 50 % brake (a higher level is sent as 50 %). Shift cut and blip need vJoy mode." />
+                    <WrapPanel x:Name="ShiftTestPanel" Margin="0,6,0,0">
                         <styles:SHButtonSecondary Click="OnTestUpshiftClick" ToolTip="Same as pressing the upshift paddle">Test upshift</styles:SHButtonSecondary>
                         <styles:SHButtonSecondary Click="OnTestDownshiftClick" ToolTip="Same as pressing the downshift paddle">Test downshift</styles:SHButtonSecondary>
                         <TextBlock x:Name="ThrottleSentText" VerticalAlignment="Center" Margin="8,0,0,0" FontFamily="Consolas" />

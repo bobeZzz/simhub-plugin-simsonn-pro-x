@@ -93,6 +93,21 @@ namespace SimsonnPedals
             }
         }
 
+        /// <summary>DirectInput's name for the pedals' own axis (direct mode binds the game to it).</summary>
+        private static string InputAxisName(InputAxis axis)
+        {
+            switch (axis)
+            {
+                case InputAxis.X: return "X Axis";
+                case InputAxis.Y: return "Y Axis";
+                case InputAxis.Z: return "Z Axis";
+                case InputAxis.RotationX: return "X Rotation";
+                case InputAxis.RotationY: return "Y Rotation";
+                case InputAxis.RotationZ: return "Z Rotation";
+                default: return "Slider";
+            }
+        }
+
         private static readonly HashSet<string> KnownAxisNames = new HashSet<string>(
             Enum.GetValues(typeof(VJoyAxis)).Cast<VJoyAxis>().Select(VJoyAxisName), StringComparer.OrdinalIgnoreCase);
 
@@ -107,7 +122,7 @@ namespace SimsonnPedals
         /// Checks the bindings against the active preset. Devices are identified through DirectInput (vJoy is VID 1234 /
         /// PID BEAD) and, for devices not plugged in, by the names iRacing saved in joyCalib.yaml.
         /// </summary>
-        public static Result Check(PedalPreset preset, bool clutch, int pedalsVendorId)
+        public static Result Check(PedalPreset preset, bool clutch, int pedalsVendorId, bool direct = false)
         {
             if (!File.Exists(ControlsPath)) return new Result { Ok = true, Text = "iRacing: no controls.cfg in " + Folder + " (not installed, or never run)." };
             var controls = File.ReadAllBytes(ControlsPath);
@@ -117,16 +132,20 @@ namespace SimsonnPedals
                 foreach (var d in directInput.GetDevices(DeviceClass.GameControl, DeviceEnumerationFlags.AttachedOnly))
                     attached[d.InstanceGuid] = d;
             return Check(controls, calibration, attached.ToDictionary(p => p.Key, p => (VendorProduct(p.Value.ProductGuid), p.Value.ProductName.Trim())),
-                preset, clutch, pedalsVendorId);
+                preset, clutch, pedalsVendorId, direct);
         }
 
         private const uint VJoyVendorProduct = 0xBEAD1234;
 
         private static uint VendorProduct(Guid productGuid) => BitConverter.ToUInt32(productGuid.ToByteArray(), 0);
 
-        /// <summary>The check itself, on plain data so it can be tested. <paramref name="attached"/>: instance GUID → (PIDVID, name).</summary>
+        /// <summary>
+        /// The check itself, on plain data so it can be tested. <paramref name="attached"/>: instance GUID → (PIDVID, name).
+        /// <paramref name="direct"/>: direct mode, where each pedal must be bound to the pedals' own axis instead of vJoy.
+        /// </summary>
         public static Result Check(byte[] controls, Dictionary<Guid, (string Name, Dictionary<int, string> Axes)> calibration,
-            Dictionary<Guid, (uint VendorProduct, string Name)> attached, PedalPreset preset, bool clutch, int pedalsVendorId)
+            Dictionary<Guid, (uint VendorProduct, string Name)> attached, PedalPreset preset, bool clutch, int pedalsVendorId,
+            bool direct = false)
         {
             var pedals = new List<(string Control, string Label, PedalConfig Config)> { ("Throttle", "throttle", preset.Throttle), ("Brake", "brake", preset.Brake) };
             if (clutch) pedals.Add(("Clutch", "clutch", preset.Clutch));
@@ -147,7 +166,20 @@ namespace SimsonnPedals
                 bool isPedals = known && (device.VendorProduct & 0xFFFF) == pedalsVendorId;
 
                 string where = axisName == null ? $"axis {binding.Axis}" : axisName;
-                if (isPedals)
+                if (direct)
+                {
+                    string expected = InputAxisName(config.SourceAxis);
+                    if (isVJoy)
+                        problems.Add($"{label} is bound to vJoy ({where}); in direct mode bind it to the pedals ({expected})");
+                    else if (!isPedals)
+                        problems.Add($"{label} is bound to {deviceName} ({where}), not the SIMSONN pedals");
+                    // Pedal axis names are DirectInput's standard ones; only those are compared.
+                    else if (axisName != null && KnownAxisNames.Contains(axisName) && !string.Equals(axisName, expected, StringComparison.OrdinalIgnoreCase))
+                        problems.Add($"{label} is bound to the pedals' {axisName}, but the {label} is on {expected}");
+                    else
+                        good.Add(label);
+                }
+                else if (isPedals)
                     problems.Add($"{label} is bound to the pedals directly ({where}), so the plugin's settings are skipped; bind it to vJoy");
                 else if (!isVJoy)
                     problems.Add($"{label} is bound to {deviceName} ({where}), not vJoy");
@@ -159,7 +191,7 @@ namespace SimsonnPedals
             }
 
             if (problems.Count == 0)
-                return new Result { Ok = true, Text = $"iRacing: {string.Join(", ", good)} bound to vJoy." };
+                return new Result { Ok = true, Text = $"iRacing: {string.Join(", ", good)} bound to {(direct ? "the SIMSONN pedals" : "vJoy")}." };
             var text = "iRacing: " + string.Join("; ", problems) + ".";
             if (good.Count > 0) text += $" OK: {string.Join(", ", good)}.";
             return new Result { Ok = false, Text = text };

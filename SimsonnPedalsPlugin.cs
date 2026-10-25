@@ -39,6 +39,9 @@ namespace SimsonnPedals
         /// <summary>True while SimHub sees the game running (not just selected).</summary>
         public bool IsGameRunning { get; private set; }
 
+        /// <summary>The car's speed while a game runs, else 0. Direct mode writes only when it's stopped.</summary>
+        public double CurrentSpeedKmh { get; private set; }
+
         /// <summary>Raised (on any thread) when the active preset is swapped.</summary>
         public event Action ActivePresetChanged;
 
@@ -94,6 +97,7 @@ namespace SimsonnPedals
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
             IsGameRunning = data.GameRunning;
+            CurrentSpeedKmh = data.GameRunning && data.NewData != null ? data.NewData.SpeedKmh : 0;
             Direct?.Tick();
             var game = data.GameName;
             string carId = data.NewData?.CarId, carModel = data.NewData?.CarModel, carClass = data.NewData?.CarClass;
@@ -227,6 +231,9 @@ namespace SimsonnPedals
         {
             lock (presetLock) modifiedCache.Clear();
             RequestSave();
+            // Direct mode: the brake's 100% and the brake cut follow edits of the active preset live.
+            var active = ActivePreset;
+            if (sender == active.Brake || sender == active.Assist) Direct?.LiveEdit();
         }
 
         /// <summary>True if <paramref name="name"/> has edits since its last Save. Cached until the next edit.</summary>

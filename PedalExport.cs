@@ -31,6 +31,25 @@ namespace SimsonnPedals
 
         private const double DirectInputMax = PedalConfig.RawMax;
 
+        // Per axis: the Manager's dead zone percentages (+34/+35), shown in the Manager only; the firmware ignores them.
+        private static readonly HashSet<int> DisplayOnly = new HashSet<int>(
+            Enumerable.Range(0, 8).SelectMany(axis => new[] { PedalSettingsLayout.AxisOffset(axis) + 34, PedalSettingsLayout.AxisOffset(axis) + 35 }));
+
+        /// <summary>Offsets where two blocks differ in anything the pedals act on (display-only bytes left out).</summary>
+        public static List<int> Differences(byte[] a, byte[] b) =>
+            Enumerable.Range(0, Math.Min(a.Length, b.Length)).Where(i => a[i] != b[i] && !DisplayOnly.Contains(i)).ToList();
+
+        /// <summary>
+        /// True if <paramref name="to"/> differs from <paramref name="from"/> only in the brake's centre and output high
+        /// end, which the live <c>damping_max</c> command sets (a 200 ms pause instead of a 2 s write).
+        /// </summary>
+        public static bool OnlyBrakeHighEnd(byte[] from, byte[] to)
+        {
+            int brake = PedalSettingsLayout.AxisOffset(PedalSettingsLayout.BrakeAxis(from));
+            var diff = Differences(from, to);
+            return diff.Count > 0 && diff.All(i => i >= brake + 2 && i < brake + 6);
+        }
+
         public static Result ToBlock(byte[] block, PedalPreset preset, bool clutch)
         {
             var result = new Result();
@@ -57,7 +76,7 @@ namespace SimsonnPedals
                 result.Lines.Add("Clutch: not in use in the pedals' settings, left as it is.");
 
             result.Block = output;
-            result.Changed = !output.SequenceEqual(block);
+            result.Changed = Differences(block, output).Count > 0;
             result.Success = true;
             return result;
         }

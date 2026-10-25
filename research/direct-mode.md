@@ -135,3 +135,16 @@ freeze at the wrong moment matters: D4 should write only while the car is stoppe
 avoid writing while driving. Open for D3: how long a *write alone* (no reads around it) pauses the joystick reports.
 Direct mode should write from the block it already holds, without re-reading each time, and the D3 test should time
 the pause.
+
+## D4–D6 (1.0.23)
+- **D4**: `DirectWriter.WaitReason()`: while SimHub sees the game running, any read, write or live command waits
+  until speed < 1 km/h and throttle and brake outputs < 2 %; `Tick()` (SimHub's data loop) sends the waiting pass
+  once that holds. Outside a game everything goes at once.
+- **D5**: an edit of the active preset's brake or throttle-cut settings schedules a live pass 0.5 s later. If the
+  export differs from what the pedals hold only in the brake's centre and high end (`PedalExport.OnlyBrakeHighEnd`),
+  it goes out with `damping_max` (raw max kept, new high end); the firmware recomputes the centre. The brake cut
+  (`ShiftAssist.BrakeCut` / `BrakeCutPercent`) is mirrored to `brakeCutoff` (tenths, capped at 500). The pedals'
+  cutoff is read along with the block. Comparisons ignore the Manager's display bytes (+34/+35), which `damping_max`
+  doesn't update.
+- **D6**: binding check with `direct: true` expects each pedal bound to the pedals' own axis named as DirectInput does
+  ("X Rotation" for RotationX…). Offline checks: [d456-test.ps1](d456-test.ps1).

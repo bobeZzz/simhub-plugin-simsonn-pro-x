@@ -107,8 +107,8 @@
             </DockPanel>
 
             <!-- Game binding -->
-            <TextBlock Style="{StaticResource Caption}" Text="Bind in game" />
-            <DockPanel>
+            <TextBlock x:Name="BindCaption" Style="{StaticResource Caption}" Text="Bind in game" />
+            <DockPanel x:Name="BindRow">
                 <Button x:Name="SweepButton" Content="Move vJoy axis" Click="OnSweepClick" Padding="10,3" Margin="0,0,8,0" />
                 <TextBlock x:Name="SweepText" VerticalAlignment="Center" TextWrapping="Wrap" Opacity="0.8"
                            Text="Start the game's pedal calibration, click here, switch back and don't touch the pedals." />
